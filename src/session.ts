@@ -1,7 +1,7 @@
 import { PaletteAnalyzer } from './analysis/analyzer'
 import { Engine } from './engine/Engine'
 import { loadAutosave, saveAutosave } from './engine/persistence'
-import { uiStore, view } from './state/ui'
+import { uiStore, view, viewStore } from './state/ui'
 
 /** The single document engine and its live colour analyser. */
 export const engine = new Engine(1800, 1200)
@@ -33,7 +33,14 @@ engine.onContentChange((live) => {
 // Layer renames / locks don't change pixels but should still be saved.
 engine.subscribe(() => scheduleSave())
 
-export async function restoreSession() {
+let restoring$: Promise<void> | null = null
+
+/** Restore the autosaved painting (once, even if called repeatedly). */
+export function restoreSession() {
+  return (restoring$ ??= restore())
+}
+
+async function restore() {
   const doc = await loadAutosave()
   if (doc) {
     try {
@@ -48,5 +55,5 @@ export async function restoreSession() {
 
 // Handy for debugging from the console during development.
 if (import.meta.env.DEV) {
-  ;(window as unknown as Record<string, unknown>).__atelier = { engine, analyzer }
+  ;(window as unknown as Record<string, unknown>).__atelier = { engine, analyzer, viewStore }
 }

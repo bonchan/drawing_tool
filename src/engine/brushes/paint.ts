@@ -1,6 +1,6 @@
 import { clamp, mixRgb, type RGB } from '../color'
 import { getRoundDab } from '../textures'
-import { gaussian, markCircle } from './helpers'
+import { capsule, gaussian, markCircle } from './helpers'
 import { COMMON, type BrushDef } from './types'
 
 export const brush: BrushDef<null> = {
@@ -30,10 +30,11 @@ interface Bristle {
   along: number
   width: number
   alpha: number
-  tone: number // brightness multiplier
+  tone: number // brightness multiplier → streaks
+  load: number // each bristle holds its own paint and runs dry at its own pace
+  thirst: number
   px: number
   py: number
-  has: boolean
 }
 
 interface OilState {
@@ -42,18 +43,22 @@ interface OilState {
   bristles: Bristle[]
   sampleCountdown: number
   angle: number
+  cx: number
+  cy: number
+  cr: number
+  oriented: boolean
 }
 
 export const oil: BrushDef<OilState> = {
   id: 'oil',
   name: 'Oil Paint',
   group: 'Paint',
-  description: 'Bristle brush that leaves streaks, runs dry, and picks up and blends the colours already on the canvas.',
+  description: 'Loaded bristle brush: thick streaky paint that runs dry, and picks up and blends the colours already on the canvas.',
   shortcut: 'O',
   target: 'buffer',
   composite: 'source-over',
   pressureMode: 'pen-or-full',
-  defaults: { size: 34, opacity: 1, flow: 0.85, smoothing: 0.3, hardness: 0.5, mix: 0.45, load: 0.6 },
+  defaults: { size: 34, opacity: 1, flow: 0.9, smoothing: 0.3, hardness: 0.5, mix: 0.45, load: 0.6 },
   controls: [
     COMMON.size,
     COMMON.opacity,
@@ -62,66 +67,110 @@ export const oil: BrushDef<OilState> = {
     { key: 'load', label: 'Load', min: 0, max: 1, step: 0.01, unit: '%', hint: 'How long until the brush runs dry' },
     COMMON.smoothing,
   ],
-  spacing: (s) => Math.max(0.8, s.size * 0.07),
+  spacing: (s) => Math.max(0.8, s.size * 0.06),
   begin(ctx, first) {
-    const count = Math.round(clamp(ctx.s.size * 0.9, 8, 70))
+    const count = Math.round(clamp(ctx.s.size * 0.8, 10, 64))
     const bristles: Bristle[] = []
     for (let i = 0; i < count; i++) {
       const o = (i / (count - 1)) * 2 - 1
       bristles.push({
-        offset: clamp(o + (ctx.rng() - 0.5) * (2 / count), -1, 1),
-        along: (ctx.rng() - 0.5) * 0.35,
-        width: 0.6 + ctx.rng() * 1.1,
-        alpha: 0.45 + ctx.rng() * 0.55,
-        tone: 0.88 + ctx.rng() * 0.24,
-        px: 0,
-        py: 0,
-        has: false,
+        offset: clamp(o + (ctx.rng() - 0.5) * (1.6 / count), -1, 1),
+        along: (ctx.rng() - 0.5) * 0.3,
+        width: 0.7 + ctx.rng() * 1.5,
+        alpha: 0.4 + ctx.rng() * 0.6,
+        tone: 0.72 + ctx.rng() * 0.52,
+        // edge bristles carry less paint, so strokes dry from the outside in
+        load: 1 - Math.abs(o) * 0.35 - ctx.rng() * 0.15,
+        thirst: 0.6 + ctx.rng() * 0.9,
+        px: first.x,
+        py: first.y,
       })
     }
     let color = ctx.color
     const under = ctx.sample(first.x, first.y, Math.max(1, ctx.s.size * 0.25))
     if (under && ctx.s.mix > 0) color = mixRgb(color, [under[0], under[1], under[2]], ctx.s.mix * 0.35 * under[3])
-    return { color, load: 1, bristles, sampleCountdown: 0, angle: first.angle }
+    return {
+      color,
+      load: 1,
+      bristles,
+      sampleCountdown: 0,
+      angle: first.angle,
+      cx: first.x,
+      cy: first.y,
+      cr: 0,
+      oriented: false,
+    }
   },
   dab(ctx, d, st) {
     const s = ctx.s
     const b = ctx.buf
+    if (d.first) return
     // pick up colour from the canvas as we drag through it
     if (s.mix > 0 && --st.sampleCountdown <= 0) {
       st.sampleCountdown = 3
       const under = ctx.sample(d.x, d.y, Math.max(1, s.size * 0.3))
       if (under && under[3] > 0.05) {
-        st.color = mixRgb(st.color, [under[0], under[1], under[2]], s.mix * 0.22 * under[3])
+        st.color = mixRgb(st.color, [under[0], under[1], under[2]], s.mix * 0.2 * under[3])
       }
-      // ...while slowly reloading toward the brush colour
-      st.color = mixRgb(st.color, ctx.color, 0.04 * (1 - s.mix))
+      // ...while slowly drifting back toward the loaded colour
+      st.color = mixRgb(st.color, ctx.color, 0.03 * (1 - s.mix))
     }
-    const spacing = Math.max(0.8, s.size * 0.07)
-    const life = (6 + 60 * s.load) * s.size
+    const spacing = Math.max(0.8, s.size * 0.06)
+    const life = (5 + 55 * s.load) * s.size
     st.load = Math.max(0, st.load - spacing / life)
-    let da = d.angle - st.angle
-    while (da > Math.PI) da -= Math.PI * 2
-    while (da < -Math.PI) da += Math.PI * 2
-    st.angle += da * 0.25
+
+    if (!st.oriented) {
+      st.angle = d.angle
+      st.oriented = true
+    } else {
+      let da = d.angle - st.angle
+      while (da > Math.PI) da -= Math.PI * 2
+      while (da < -Math.PI) da += Math.PI * 2
+      st.angle += da * 0.3
+    }
     const nx = -Math.sin(st.angle)
     const ny = Math.cos(st.angle)
     const tx = Math.cos(st.angle)
     const ty = Math.sin(st.angle)
-    const r = (s.size / 2) * (0.55 + 0.45 * d.pressure)
-    const scale = Math.max(1, s.size / 26)
-    // with less paint/pressure, only some bristles touch the canvas → dry-brush scumbling
-    const contact = clamp(0.25 + 0.55 * d.pressure + 0.5 * st.load, 0, 1.2)
+    const r = (s.size / 2) * (0.6 + 0.4 * d.pressure)
+    const scale = Math.max(1, s.size / 24)
+    if (st.cr === 0) {
+      // First movement: lay the bristles out across the start point, facing the stroke.
+      for (const br of st.bristles) {
+        br.px = st.cx + nx * br.offset * r + tx * br.along * r
+        br.py = st.cy + ny * br.offset * r + ty * br.along * r
+      }
+    }
     const [cr, cg, cb] = st.color
+
+    // 1. body of paint underneath the bristle texture
+    const body = Math.pow(st.load, 0.8) * (0.35 + 0.65 * d.pressure)
+    if (body > 0.02) {
+      // Overlapping dabs accumulate; solve for the per-dab alpha that builds up
+      // to the target coverage across the brush width.
+      const target = clamp(s.flow * 0.62 * body, 0, 0.98)
+      b.globalAlpha = 1 - Math.pow(1 - target, spacing / Math.max(1, r * 1.56))
+      b.fillStyle = `rgb(${cr | 0},${cg | 0},${cb | 0})`
+      const r0 = st.cr || r * 0.78
+      capsule(b, st.cx, st.cy, r0, d.x, d.y, r * 0.78)
+    }
+    st.cx = d.x
+    st.cy = d.y
+    st.cr = r * 0.78
+
+    // 2. bristle streaks
+    const contact = 0.35 + 0.75 * d.pressure
     b.lineCap = 'round'
     for (const br of st.bristles) {
-      const reach = Math.abs(br.offset)
       const x = d.x + nx * br.offset * r + tx * br.along * r
       const y = d.y + ny * br.offset * r + ty * br.along * r
-      if (br.has && reach < contact && ctx.rng() < 0.6 + 0.4 * st.load) {
+      br.load = Math.max(0, br.load - (spacing / life) * br.thirst * (0.6 + Math.abs(br.offset)))
+      const reach = Math.abs(br.offset)
+      const paint = Math.min(br.load, st.load + 0.25)
+      if (reach < contact && paint > 0.04) {
         const k = br.tone
         b.strokeStyle = `rgb(${clamp(cr * k, 0, 255) | 0},${clamp(cg * k, 0, 255) | 0},${clamp(cb * k, 0, 255) | 0})`
-        b.globalAlpha = clamp(s.flow * br.alpha * (0.35 + 0.65 * st.load) * (1 - reach * 0.35), 0.01, 1)
+        b.globalAlpha = clamp(s.flow * br.alpha * (0.3 + 0.7 * Math.sqrt(paint)), 0.01, 1)
         b.lineWidth = br.width * scale
         b.beginPath()
         b.moveTo(br.px, br.py)
@@ -130,7 +179,6 @@ export const oil: BrushDef<OilState> = {
       }
       br.px = x
       br.py = y
-      br.has = true
     }
     markCircle(ctx, d.x, d.y, r + 6 * scale + s.size * 0.1)
   },

@@ -59,6 +59,9 @@ export interface PaletteResult {
 
 const BINS = 32768
 const NEUTRAL_CHROMA = 0.035
+const PAINT_ALPHA = 24
+/** Painted pixels this close to the paper colour are visually just paper. */
+const PAPER_LIKE = 0.022
 
 interface Cluster {
   l: number
@@ -81,7 +84,8 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   let painted = 0
   for (let i = 0; i < n; i++) {
     const o = i * 4
-    const isPainted = coverage[o + 3] > 6
+    // Ignore whisper-thin haze (airbrush falloff, charcoal dust): it reads as paper.
+    const isPainted = coverage[o + 3] > PAINT_ALPHA
     if (isPainted) painted++
     if (!req.includePaper && !isPainted) continue
     const r = color[o]
@@ -107,9 +111,28 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   }
   if (samples === 0) return result
 
-  // Collect occupied bins.
+  // Collect occupied bins (dropping paper-coloured ones unless paper is counted).
+  const paperLab = rgbToOklab(req.paper)
   const binKeys: number[] = []
-  for (let k = 0; k < BINS; k++) if (counts[k]) binKeys.push(k)
+  for (let k = 0; k < BINS; k++) {
+    const c = counts[k]
+    if (!c) continue
+    if (!req.includePaper) {
+      const lab = rgbToOklab([sr[k] / c, sg[k] / c, sb[k] / c])
+      if (labDistance(lab, paperLab) < PAPER_LIKE) {
+        samples -= c
+        continue
+      }
+    }
+    binKeys.push(k)
+  }
+  if (samples <= 0) {
+    result.samples = 0
+    if (!req.includePaper) result.coverage = 0
+    return result
+  }
+  result.samples = samples
+  if (!req.includePaper) result.coverage = samples / n
   binKeys.sort((x, y) => counts[y] - counts[x])
   const m = binKeys.length
   const binLab: Lab[] = new Array(m)
@@ -219,9 +242,8 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   }
 
   clusters.sort((x, y) => y.w - x.w)
-  result.distinct = clusters.filter((c) => c.w / samples >= 0.0015).length
+  result.distinct = clusters.filter((c) => c.w / samples >= 0.001).length
 
-  const paperLab = rgbToOklab(req.paper)
   const familyAcc = new Map<FamilyName, { w: number; l: number; a: number; b: number }>()
   for (const cl of clusters) {
     const share = cl.w / samples

@@ -137,6 +137,7 @@ export class Engine {
   private contentListeners = new Set<(live: boolean) => void>()
   private state!: DocState
   private seed = 1
+  private loadToken = 0
   /** End of the last stroke, for shift-click straight lines. */
   lastStrokeEnd: { x: number; y: number } | null = null
 
@@ -934,26 +935,36 @@ export class Engine {
 
   /** Replace the whole document (new canvas / open project). */
   async load(doc: SerializedDoc | { width: number; height: number; paper?: Partial<Paper> }) {
+    const token = ++this.loadToken
+    // Decode everything first, then swap the document in atomically, so a
+    // second load started meanwhile can't interleave its layers with ours.
+    const bitmaps =
+      'layers' in doc ? await Promise.all(doc.layers.map((l) => createImageBitmap(l.png))) : []
+    if (token !== this.loadToken) {
+      for (const b of bitmaps) b.close?.()
+      return
+    }
     this.cancelStroke()
+    this.moving = null
     this.resizeSurfaces(doc.width, doc.height)
-    this.layers = []
+    const layers: Layer[] = []
     if ('layers' in doc && doc.layers.length) {
-      for (const meta of doc.layers) {
+      doc.layers.forEach((meta, i) => {
         const layer = this.makeLayer(meta.name)
         layer.visible = meta.visible
         layer.opacity = meta.opacity
         layer.blend = meta.blend
         layer.locked = meta.locked
-        const bmp = await createImageBitmap(meta.png)
-        layer.ctx.drawImage(bmp, 0, 0)
-        bmp.close?.()
-        this.layers.push(layer)
-      }
-      this.activeId = this.layers[Math.min(this.layers.length - 1, doc.activeIndex)].id
+        layer.ctx.drawImage(bitmaps[i], 0, 0)
+        bitmaps[i].close?.()
+        layers.push(layer)
+      })
     } else {
-      this.addLayerInternal('Layer 1', 0)
-      this.activeId = this.layers[0].id
+      layers.push(this.makeLayer('Layer 1'))
     }
+    this.layers = layers
+    const activeIndex = 'activeIndex' in doc ? doc.activeIndex : 0
+    this.activeId = layers[Math.max(0, Math.min(layers.length - 1, activeIndex))].id
     if (doc.paper) Object.assign(this.paper, doc.paper)
     this.history.clear()
     this.lastStrokeEnd = null
