@@ -121,6 +121,32 @@ kbd {
   z-index: 3;
 }
 
+.empty-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(16, 17, 20, 0.82);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow);
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+  max-width: calc(100% - 32px);
+  animation: toast-in 0.4s ease-out;
+}
+.empty-hint strong {
+  color: var(--text);
+  font-size: 13px;
+}
 .canvas-wrap {
   position: absolute;
   inset: 0;
@@ -1026,6 +1052,18 @@ button.comp-row:hover,
   flex-direction: column;
   gap: 8px;
   margin-bottom: 10px;
+}
+.layer-props-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.btn-small {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 12px;
+  gap: 5px;
 }
 .blend-select {
   height: 28px;

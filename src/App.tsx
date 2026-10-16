@@ -9,6 +9,7 @@ import { LeftPanel } from './components/LeftPanel'
 import { StatusBar } from './components/StatusBar'
 import { TooltipLayer } from './components/TooltipLayer'
 import { TopBar } from './components/TopBar'
+import { useAnalysis } from './hooks/useApp'
 import { exportPng, openFile, saveProject } from './lib/actions'
 import { BRUSH_LIST } from './engine/brushes'
 import { MAX_LAYERS } from './engine/Engine'
@@ -113,6 +114,20 @@ function useFileDrop() {
   return dragging
 }
 
+/** A gentle nudge on a blank canvas; disappears with the first stroke. */
+function EmptyHint() {
+  const empty = useAnalysis((s) => s.result !== null && s.result.coverage === 0 && s.options.scope === 'visible')
+  if (!empty) return null
+  return (
+    <div className="empty-hint" aria-hidden>
+      <strong>Pick a brush and start painting</strong>
+      <span>
+        The colour composition updates with every stroke · press <kbd>?</kbd> for shortcuts
+      </span>
+    </div>
+  )
+}
+
 export default function App() {
   const leftOpen = useStore(uiStore, (s) => s.leftOpen)
   const rightOpen = useStore(uiStore, (s) => s.rightOpen)
@@ -132,6 +147,7 @@ export default function App() {
         <main className="stage">
           <CanvasView />
           {!ready && <div className="stage-loading">Restoring your painting…</div>}
+          {ready && <EmptyHint />}
         </main>
         {rightOpen && (
           <aside className="panel panel-right" aria-label="Colour, composition and layers">

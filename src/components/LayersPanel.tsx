@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Copy, Eye, EyeOff, Layers, Lock, LockOpen, Plus, Trash } from 'lucide-react'
+import { ArrowDownToLine, Copy, Eraser, Eye, EyeOff, Layers, Lock, LockOpen, Plus, Trash } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { engine } from '../session'
 import { BLEND_MODES, MAX_LAYERS, type BlendMode, type LayerMeta } from '../engine/Engine'
@@ -113,6 +113,7 @@ function LayerRow({
         <span className="layer-meta">
           {BLEND_MODES.find((b) => b.id === layer.blend)?.label}
           {layer.opacity < 1 ? ` · ${Math.round(layer.opacity * 100)}%` : ''}
+          {layer.alphaLock ? ' · α locked' : ''}
         </span>
       </div>
       <button
@@ -210,6 +211,18 @@ export function LayersPanel() {
             ))}
           </select>
           <Slider label="Opacity" value={active.opacity} min={0} max={1} unit="%" onChange={(opacity) => engine.setLayerProps(active.id, { opacity })} />
+          <div className="layer-props-row">
+            <Toggle
+              label="Lock transparency"
+              checked={active.alphaLock}
+              onChange={(alphaLock) => engine.setLayerProps(active.id, { alphaLock })}
+              hint="Paint only where this layer already has pixels – perfect for colouring line art"
+            />
+            <button type="button" className="btn btn-small" onClick={() => engine.clearLayer(active.id)} data-tip="Clear layer  ·  Delete">
+              <Eraser size={13} />
+              Clear
+            </button>
+          </div>
         </div>
       )}
       <ul className="layer-list">

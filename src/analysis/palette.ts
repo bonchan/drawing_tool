@@ -325,7 +325,8 @@ const distTo = paletteDistance
 export function familyOf(lab: Lab): FamilyName {
   const [L, C, h] = labToLch(lab)
   if (C < NEUTRAL_CHROMA) return 'Neutrals'
-  if (h >= 20 && h < 95 && L < 0.62 && C < 0.17) return 'Browns'
+  // dark, muted reds/oranges/yellows read as browns; saturated ones keep their hue
+  if (h >= 25 && h < 95 && L < 0.62 && C < 0.13) return 'Browns'
   if (h >= 345 || h < 15) return L > 0.72 ? 'Pinks' : 'Reds'
   if (h < 45) return L > 0.8 && C < 0.12 ? 'Pinks' : 'Reds'
   if (h < 75) return 'Oranges'

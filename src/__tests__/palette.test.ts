@@ -114,5 +114,7 @@ describe('familyOf', () => {
     expect(fam('#7b2cbf')).toBe('Purples')
     expect(fam('#808080')).toBe('Neutrals')
     expect(fam('#6f4e37')).toBe('Browns')
+    expect(fam('#8a3324')).toBe('Browns')
+    expect(fam('#c23b3b')).toBe('Reds')
   })
 })

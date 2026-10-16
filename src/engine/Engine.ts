@@ -49,6 +49,8 @@ export interface LayerMeta {
   opacity: number
   blend: BlendMode
   locked: boolean
+  /** Paint only where the layer already has pixels ("preserve transparency"). */
+  alphaLock: boolean
   /** Bumped whenever the layer's pixels change (drives thumbnails). */
   version: number
 }
@@ -179,13 +181,14 @@ export class Engine {
     this.state = {
       width: this.width,
       height: this.height,
-      layers: this.layers.map(({ id, name, visible, opacity, blend, locked, version }) => ({
+      layers: this.layers.map(({ id, name, visible, opacity, blend, locked, alphaLock, version }) => ({
         id,
         name,
         visible,
         opacity,
         blend,
         locked,
+        alphaLock,
         version,
       })),
       activeId: this.activeId,
@@ -276,6 +279,11 @@ export class Engine {
         t.globalCompositeOperation = s.brush.composite
         t.globalAlpha = Math.min(1, s.settings.opacity * (s.brush.previewOpacity ?? 1))
         t.drawImage(this.buffer, x, y, w, h, x, y, w, h)
+        if (layer.alphaLock) {
+          t.globalAlpha = 1
+          t.globalCompositeOperation = 'destination-in'
+          t.drawImage(this.snapshot, x, y, w, h, x, y, w, h)
+        }
         t.restore()
         src = this.temp
       }
@@ -350,6 +358,7 @@ export class Engine {
       opacity: 1,
       blend: 'source-over',
       locked: false,
+      alphaLock: false,
       version: 0,
       canvas,
       ctx: get2d(canvas),
@@ -403,6 +412,7 @@ export class Engine {
     copy.opacity = src.opacity
     copy.blend = src.blend
     copy.visible = src.visible
+    copy.alphaLock = src.alphaLock
     copy.ctx.drawImage(src.canvas, 0, 0)
     this.addLayerInternal(copy.name, index, copy)
     const prevActive = this.activeId
@@ -524,7 +534,10 @@ export class Engine {
     this.contentChanged()
   }
 
-  setLayerProps(id: string, props: Partial<Pick<LayerMeta, 'name' | 'visible' | 'opacity' | 'blend' | 'locked'>>) {
+  setLayerProps(
+    id: string,
+    props: Partial<Pick<LayerMeta, 'name' | 'visible' | 'opacity' | 'blend' | 'locked' | 'alphaLock'>>,
+  ) {
     const layer = this.findLayer(id)
     if (!layer) return
     Object.assign(layer, props)
@@ -560,6 +573,23 @@ export class Engine {
     layer.ctx.drawImage(img, (this.width - w) / 2, (this.height - h) / 2, w, h)
     layer.version++
     this.afterLayerChange()
+  }
+
+  /** Clip a layer back to the coverage it had before the operation (alpha lock). */
+  private restoreAlpha(layer: Layer, b: Rect) {
+    const x = Math.max(0, Math.floor(b.x0))
+    const y = Math.max(0, Math.floor(b.y0))
+    const w = Math.min(this.width, Math.ceil(b.x1)) - x
+    const h = Math.min(this.height, Math.ceil(b.y1)) - y
+    if (w <= 0 || h <= 0) return
+    const L = layer.ctx
+    L.save()
+    L.beginPath()
+    L.rect(x, y, w, h)
+    L.clip()
+    L.globalCompositeOperation = 'destination-in'
+    L.drawImage(this.snapshot, x, y, w, h, x, y, w, h)
+    L.restore()
   }
 
   // --------------------------------------------------------------- history
@@ -755,6 +785,7 @@ export class Engine {
           L.drawImage(this.buffer, b.x0, b.y0, w, h, b.x0, b.y0, w, h)
           L.restore()
         }
+        if (layer.alphaLock) this.restoreAlpha(layer, b)
         this.pushPixels(layer, b, s.label)
         this.bufCtx.clearRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
         this.markDirty(b.x0, b.y0, b.x1, b.y1)
@@ -824,6 +855,7 @@ export class Engine {
     layer.ctx.globalAlpha = opts.opacity
     layer.ctx.drawImage(tmp.canvas, 0, 0, w, h, res.x0, res.y0, w, h)
     layer.ctx.restore()
+    if (layer.alphaLock) this.restoreAlpha(layer, res)
     const rect = { x0: res.x0, y0: res.y0, x1: res.x1, y1: res.y1 }
     this.pushPixels(layer, rect, 'Fill')
     this.markDirty(rect.x0, rect.y0, rect.x1, rect.y1)
@@ -918,7 +950,15 @@ export class Engine {
           new Promise<SerializedDoc['layers'][number]>((resolve, reject) =>
             l.canvas.toBlob((png) => {
               if (!png) return reject(new Error('Could not encode layer'))
-              resolve({ name: l.name, visible: l.visible, opacity: l.opacity, blend: l.blend, locked: l.locked, png })
+              resolve({
+                name: l.name,
+                visible: l.visible,
+                opacity: l.opacity,
+                blend: l.blend,
+                locked: l.locked,
+                alphaLock: l.alphaLock,
+                png,
+              })
             }, 'image/png'),
           ),
       ),
@@ -955,6 +995,7 @@ export class Engine {
         layer.opacity = meta.opacity
         layer.blend = meta.blend
         layer.locked = meta.locked
+        layer.alphaLock = !!meta.alphaLock
         layer.ctx.drawImage(bitmaps[i], 0, 0)
         bitmaps[i].close?.()
         layers.push(layer)
