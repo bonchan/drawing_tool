@@ -95,7 +95,7 @@ async function restore() {
   else setTimeout(warm, 500)
 }
 
-// Handy for debugging from the console during development.
-if (import.meta.env.DEV) {
+// Handy for debugging from the console (dev builds, or any build with ?debug).
+if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
   ;(window as unknown as Record<string, unknown>).__atelier = { engine, analyzer, viewStore }
 }

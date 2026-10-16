@@ -90,6 +90,12 @@ describe('analyzePalette', () => {
     expect(r.other).toBeGreaterThan(0)
   })
 
+  it('gives duplicate names light/dark qualifiers', () => {
+    const r = analyzePalette(req(grid([['#2f6fb3', 100, true], ['#1d4f8a', 100, true]]), { mergeDistance: 0.02 }))
+    const names = r.swatches.map((s) => s.name)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
   it('returns an empty result for a blank canvas', () => {
     const r = analyzePalette(req(grid([['#fbf8f1', 100, false]])))
     expect(r.samples).toBe(0)

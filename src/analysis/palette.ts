@@ -276,6 +276,7 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
       isPaper,
     }
   })
+  disambiguateNames(result.swatches)
   result.other = Math.max(0, 1 - result.swatches.reduce((s, c) => s + c.share, 0))
   if (result.other < 1e-6) result.other = 0
 
@@ -321,6 +322,22 @@ export function paletteDistance(lab: Lab, c: { l: number; a: number; b: number }
 }
 
 const distTo = paletteDistance
+
+/** Two groups that map to the same colour name get light/dark qualifiers. */
+function disambiguateNames(swatches: ColorSwatch[]) {
+  const groups = new Map<string, ColorSwatch[]>()
+  for (const s of swatches) {
+    const g = groups.get(s.name)
+    if (g) g.push(s)
+    else groups.set(s.name, [s])
+  }
+  for (const [name, g] of groups) {
+    if (g.length < 2) continue
+    g.sort((a, b) => b.lab[0] - a.lab[0])
+    const tags = g.length === 2 ? ['light', 'dark'] : g.length === 3 ? ['light', 'mid', 'dark'] : g.map((_, i) => String(i + 1))
+    g.forEach((s, i) => (s.name = `${name} (${tags[i]})`))
+  }
+}
 
 export function familyOf(lab: Lab): FamilyName {
   const [L, C, h] = labToLch(lab)
