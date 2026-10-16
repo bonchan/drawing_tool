@@ -43,8 +43,10 @@ export class PaletteAnalyzer {
   private timer: ReturnType<typeof setTimeout> | null = null
   private jobId = 0
   private startedAt = 0
-  private colorCtx = get2d(createCanvas(1, 1), { willReadFrequently: true })
-  private coverCtx = get2d(createCanvas(1, 1), { willReadFrequently: true })
+  // GPU-backed on purpose: layers are downscaled on the GPU and only the small
+  // sample grid is read back (a CPU canvas would read back every full layer).
+  private colorCtx = get2d(createCanvas(1, 1))
+  private coverCtx = get2d(createCanvas(1, 1))
   private nextSwatchId = 1
 
   constructor(engine: Engine) {
