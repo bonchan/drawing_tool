@@ -387,8 +387,13 @@ export class Engine {
     return `Layer ${n}`
   }
 
+  /** A stroke or move is in progress; document-level edits must wait. */
+  get busy() {
+    return this.stroke !== null || this.moving !== null
+  }
+
   addLayer(name?: string): string | null {
-    if (this.layers.length >= MAX_LAYERS) return null
+    if (this.busy || this.layers.length >= MAX_LAYERS) return null
     const index = this.layers.indexOf(this.active) + 1
     const layer = this.addLayerInternal(name ?? this.nextLayerName(), index)
     const prevActive = this.activeId
@@ -415,7 +420,7 @@ export class Engine {
 
   duplicateLayer(id: string) {
     const src = this.findLayer(id)
-    if (!src || this.layers.length >= MAX_LAYERS) return
+    if (!src || this.busy || this.layers.length >= MAX_LAYERS) return
     const index = this.layers.indexOf(src) + 1
     const copy = this.makeLayer(`${src.name} copy`)
     copy.opacity = src.opacity
@@ -444,7 +449,7 @@ export class Engine {
 
   deleteLayer(id: string) {
     const layer = this.findLayer(id)
-    if (!layer) return
+    if (!layer || this.busy) return
     if (this.layers.length === 1) {
       this.clearLayer(id)
       return
@@ -471,7 +476,7 @@ export class Engine {
 
   moveLayer(id: string, toIndex: number) {
     const layer = this.findLayer(id)
-    if (!layer) return
+    if (!layer || this.busy) return
     const from = this.layers.indexOf(layer)
     const to = Math.max(0, Math.min(this.layers.length - 1, toIndex))
     if (from === to) return
@@ -491,10 +496,11 @@ export class Engine {
 
   mergeDown(id: string) {
     const upper = this.findLayer(id)
-    if (!upper) return
+    if (!upper || this.busy) return
     const index = this.layers.indexOf(upper)
     if (index <= 0) return
     const lower = this.layers[index - 1]
+    if (lower.locked) return
     const before = lower.ctx.getImageData(0, 0, this.width, this.height)
     lower.ctx.save()
     lower.ctx.globalAlpha = upper.visible ? upper.opacity : 0
@@ -527,7 +533,7 @@ export class Engine {
 
   clearLayer(id: string) {
     const layer = this.findLayer(id)
-    if (!layer || layer.locked) return
+    if (!layer || layer.locked || this.busy) return
     this.snapCtx.globalCompositeOperation = 'copy'
     this.snapCtx.drawImage(layer.canvas, 0, 0)
     this.snapCtx.globalCompositeOperation = 'source-over'
@@ -537,7 +543,7 @@ export class Engine {
   }
 
   setActiveLayer(id: string) {
-    if (!this.findLayer(id) || this.stroke) return
+    if (!this.findLayer(id) || this.busy) return
     this.activeId = id
     this.emit()
     this.contentChanged()
@@ -629,12 +635,12 @@ export class Engine {
   }
 
   undo() {
-    if (this.stroke) return
+    if (this.busy) return
     if (this.history.undo()) this.afterLayerChange()
   }
 
   redo() {
-    if (this.stroke) return
+    if (this.busy) return
     if (this.history.redo()) this.afterLayerChange()
   }
 
@@ -875,8 +881,13 @@ export class Engine {
 
   // ------------------------------------------------------------ fill & pick
 
-  fill(x: number, y: number, colorHex: string, opts: { tolerance: number; sampleAll: boolean; expand: number; opacity: number }) {
-    if (this.blockedReason()) return false
+  fill(
+    x: number,
+    y: number,
+    colorHex: string,
+    opts: { tolerance: number; sampleAll: boolean; expand: number; opacity: number },
+  ) {
+    if (this.busy || this.blockedReason()) return false
     const layer = this.active
     const W = this.width
     const H = this.height

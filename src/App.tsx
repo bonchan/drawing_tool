@@ -59,7 +59,12 @@ function useShortcuts() {
       else if (/^[0-9]$/.test(k)) tools.setOpacity(k === '0' ? 1 : Number(k) / 10)
       else if (k === '+' || k === '=') view.zoomBy(1.25)
       else if (k === '-') view.zoomBy(1 / 1.25)
-      else if (k === 'delete' || k === 'backspace') engine.clearLayer(engine.getState().activeId)
+      else if (k === 'delete' || k === 'backspace') {
+        const st = engine.getState()
+        const layer = st.layers.find((l) => l.id === st.activeId)
+        if (layer?.locked) ui.toast(`“${layer.name}” is locked`, 'warn')
+        else engine.clearLayer(st.activeId)
+      }
       else if (k === 'tab') {
         const s = uiStore.get()
         const open = !(s.leftOpen || s.rightOpen)

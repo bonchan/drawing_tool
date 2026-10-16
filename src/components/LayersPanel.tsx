@@ -187,10 +187,21 @@ export function LayersPanel() {
           <IconButton label="Duplicate layer" shortcut="Ctrl+J" onClick={() => engine.duplicateLayer(activeId)}>
             <Copy size={14} />
           </IconButton>
-          <IconButton label="Merge down" shortcut="Ctrl+E" disabled={activeIndex <= 0} onClick={() => engine.mergeDown(activeId)}>
+          <IconButton
+            label="Merge down"
+            shortcut="Ctrl+E"
+            disabled={activeIndex <= 0}
+            onClick={() => {
+              if (layers[activeIndex - 1]?.locked) ui.toast(`“${layers[activeIndex - 1].name}” is locked`, 'warn')
+              else engine.mergeDown(activeId)
+            }}
+          >
             <ArrowDownToLine size={14} />
           </IconButton>
-          <IconButton label="Delete layer" onClick={() => engine.deleteLayer(activeId)}>
+          <IconButton
+            label="Delete layer"
+            onClick={() => (active?.locked ? ui.toast(`“${active.name}” is locked`, 'warn') : engine.deleteLayer(activeId))}
+          >
             <Trash size={14} />
           </IconButton>
         </>
@@ -218,7 +229,12 @@ export function LayersPanel() {
               onChange={(alphaLock) => engine.setLayerProps(active.id, { alphaLock })}
               hint="Paint only where this layer already has pixels – perfect for colouring line art"
             />
-            <button type="button" className="btn btn-small" onClick={() => engine.clearLayer(active.id)} data-tip="Clear layer  ·  Delete">
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() => (active.locked ? ui.toast(`“${active.name}” is locked`, 'warn') : engine.clearLayer(active.id))}
+              data-tip="Clear layer  ·  Delete"
+            >
               <Eraser size={13} />
               Clear
             </button>
