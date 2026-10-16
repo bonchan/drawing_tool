@@ -4,7 +4,7 @@ import { useStore } from '../state/store'
 import { toolStore, tools, type ToolId } from '../state/tools'
 import { uiStore } from '../state/ui'
 import { BrushPreview } from './BrushPreview'
-import { IconButton, Section, Slider, Toggle } from './kit'
+import { IconButton, Section, Segmented, Slider, Toggle } from './kit'
 
 const UTILITY_TOOLS: Array<{ id: ToolId; label: string; icon: typeof Eraser; key: string }> = [
   { id: 'eraser', label: 'Eraser', icon: Eraser, key: 'E' },
@@ -114,6 +114,26 @@ const HINTS: Partial<Record<ToolId, string>> = {
   hand: 'Drag to pan. Scroll or pinch to zoom. Hold Space with any tool to pan temporarily.',
 }
 
+function SymmetryRow() {
+  const symmetry = useStore(toolStore, (s) => s.symmetry)
+  return (
+    <div className="symmetry-row" title="Paint mirrored copies around the canvas centre">
+      <span className="mini-label">Symmetry</span>
+      <Segmented
+        label="Symmetry"
+        value={symmetry}
+        onChange={tools.setSymmetry}
+        options={[
+          { value: 'off', label: 'Off' },
+          { value: 'mirror', label: 'Mirror' },
+          { value: 'quad', label: '4×' },
+          { value: 'radial', label: '6×' },
+        ]}
+      />
+    </div>
+  )
+}
+
 export function LeftPanel() {
   const tool = useStore(toolStore, (s) => s.tool)
   const title = isBrushId(tool)
@@ -128,6 +148,7 @@ export function LeftPanel() {
   return (
     <aside className="panel panel-left" aria-label="Tools and brushes">
       <ToolRow />
+      <SymmetryRow />
       <div className="panel-scroll">
         <Section
           id="settings"

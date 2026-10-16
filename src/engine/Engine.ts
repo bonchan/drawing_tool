@@ -91,11 +91,18 @@ export interface SerializedDoc {
 
 export const MAX_LAYERS = 40
 
+export type Symmetry = 'off' | 'mirror' | 'quad' | 'radial'
+
+/** Maps a dab into one symmetric copy of the stroke. */
+type DabMap = (d: Dab) => Dab
+
 interface ActiveStroke {
   brush: BrushDef<unknown>
   settings: BrushSettings
   layer: Layer
-  state: unknown
+  /** One brush state per symmetric copy (copy 0 is the real stroke). */
+  states: unknown[]
+  maps: DabMap[]
   builder: StrokeBuilder
   paint: PaintContext
   bounds: Rect | null
@@ -140,6 +147,8 @@ export class Engine {
   private state!: DocState
   private seed = 1
   private loadToken = 0
+  /** Mirror / radial painting around the canvas centre. */
+  symmetry: Symmetry = 'off'
   /** End of the last stroke, for shift-click straight lines. */
   lastStrokeEnd: { x: number; y: number } | null = null
 
@@ -694,7 +703,6 @@ export class Engine {
       brush,
       settings: { ...settings },
       layer,
-      state: null,
       builder: null as unknown as StrokeBuilder,
       paint: null as unknown as PaintContext,
       bounds: null,
@@ -702,6 +710,8 @@ export class Engine {
       lastTick: performance.now(),
       label: brush.name,
       started: false,
+      states: [],
+      maps: this.symmetryMaps(),
     }
     stroke.paint = {
       buf: this.bufCtx,
@@ -727,12 +737,7 @@ export class Engine {
       pressureMode: brush.pressureMode,
       spacing: (pr) => brush.spacing(stroke.settings, pr),
       onDab: (d) => {
-        if (!stroke.started) {
-          stroke.state = brush.begin(stroke.paint, d)
-          stroke.started = true
-        }
-        resetCtx(this.bufCtx)
-        brush.dab(stroke.paint, d, stroke.state)
+        this.dispatchDab(stroke, d)
         stroke.lastDab = d
         stroke.lastTick = performance.now()
       },
@@ -756,9 +761,49 @@ export class Engine {
     if (!s || !s.brush.continuous || !s.lastDab || !s.started) return
     if (now - s.lastTick < 28) return
     s.lastTick = now
-    resetCtx(this.bufCtx)
-    s.brush.dab(s.paint, { ...s.lastDab, time: now, first: false }, s.state)
+    this.dispatchDab(s, { ...s.lastDab, time: now, first: false })
     this.contentChanged(true)
+  }
+
+  /** Run one dab through the brush for the stroke and each of its symmetric copies. */
+  private dispatchDab(stroke: ActiveStroke, d: Dab) {
+    const { brush, paint, maps, states } = stroke
+    if (!stroke.started) {
+      for (const m of maps) states.push(brush.begin(paint, m(d)))
+      stroke.started = true
+    }
+    for (let i = 0; i < maps.length; i++) {
+      resetCtx(this.bufCtx)
+      brush.dab(paint, maps[i](d), states[i])
+    }
+  }
+
+  private symmetryMaps(): DabMap[] {
+    const cx = this.width / 2
+    const cy = this.height / 2
+    const id: DabMap = (d) => d
+    const flipX: DabMap = (d) => ({ ...d, x: 2 * cx - d.x, angle: Math.PI - d.angle, tiltX: -d.tiltX })
+    const flipY: DabMap = (d) => ({ ...d, y: 2 * cy - d.y, angle: -d.angle, tiltY: -d.tiltY })
+    const rot = (a: number): DabMap => {
+      const c = Math.cos(a)
+      const sn = Math.sin(a)
+      return (d) => ({
+        ...d,
+        x: cx + (d.x - cx) * c - (d.y - cy) * sn,
+        y: cy + (d.x - cx) * sn + (d.y - cy) * c,
+        angle: d.angle + a,
+      })
+    }
+    switch (this.symmetry) {
+      case 'mirror':
+        return [id, flipX]
+      case 'quad':
+        return [id, flipX, flipY, (d) => flipY(flipX(d))]
+      case 'radial':
+        return [0, 1, 2, 3, 4, 5].map((k) => (k === 0 ? id : rot((k * Math.PI) / 3)))
+      default:
+        return [id]
+    }
   }
 
   endStroke() {
@@ -768,9 +813,19 @@ export class Engine {
     let bounds = s.bounds
     const layer = s.layer
     if (bounds && s.brush.end && s.started) {
-      resetCtx(this.bufCtx)
-      const grown = s.brush.end(s.paint, s.state, clampRect(bounds, this.width, this.height))
-      if (grown) bounds = unionRect(bounds, grown)
+      const b = clampRect(bounds, this.width, this.height)
+      if (s.brush.endMode === 'rerender') {
+        // each copy redraws itself, so clear the shared buffer once first
+        this.bufCtx.clearRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
+        for (const st of s.states) {
+          resetCtx(this.bufCtx)
+          s.brush.end(s.paint, st, b)
+        }
+      } else {
+        resetCtx(this.bufCtx)
+        const grown = s.brush.end(s.paint, s.states[0], b)
+        if (grown) bounds = unionRect(bounds, grown)
+      }
     }
     if (bounds) {
       const b = clampRect(bounds, this.width, this.height)

@@ -16,6 +16,7 @@ const NAMES: Array<[string, string]> = [
   ['Pale Lilac', '#e4dcf0'],
   ['Light Blue Gray', '#c4d2df'],
   ['Blue Gray', '#8ea3b8'],
+  ['Light Steel Blue', '#b0c4de'],
   ['Sage Gray', '#b3bdab'],
   ['Mushroom', '#bdb1a3'],
   ['Silver', '#c0c0c0'],

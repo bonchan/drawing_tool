@@ -19,7 +19,10 @@ Every brush is a small, real paint engine (not a stretched image stamp). All of 
 Each brush has its own settings (size, opacity, flow, stabilizer, plus brush-specific ones like wetness, granulation, nib angle, blending). The brush library shows a live preview drawn by the real engine, in your current colour.
 
 ### Layers
-Add, duplicate, delete, rename (double-click), show/hide, lock, reorder by drag and drop, merge down, per-layer opacity and 16 blend modes. The paper sits underneath as a background "layer": change its colour, toggle its cold-press texture, or hide it for a transparent export.
+Add, duplicate, delete, clear, rename (double-click), show/hide, lock, **lock transparency** (paint only inside existing pixels, which is handy for colouring line art), reorder by drag and drop, merge down, per-layer opacity and 16 blend modes. The paper sits underneath as a background "layer": change its colour, toggle its cold-press texture, or hide it for a transparent export.
+
+### Symmetry
+Mirror, 4-way and 6-way radial painting around the canvas centre, with guides. It works with every brush; each mirrored copy keeps its own brush state, so ink tapers, bristles and blending behave correctly in every copy.
 
 ### Live colour composition
 A panel that always shows **what percentage of the painting each colour takes up**, updating *while you paint*:
@@ -32,7 +35,7 @@ A panel that always shows **what percentage of the painting each colour takes up
 How it works: the visible image is sampled on a grid using nearest-neighbour sampling, so the pixel colours are real and unblended. Colours are bucketed into a 15-bit histogram and grouped in the perceptual **OKLab** space (greedy seeding, then k-means refinement), all in a Web Worker. Matching then keeps each group's identity stable from one update to the next, so the chart animates instead of flickering.
 
 ### Everything else
-Undo/redo (80 steps, memory-capped), pan/zoom (scroll, pinch, space-drag), straight lines with Shift-click, Alt/right-click colour picking, palm rejection (fingers pan once a stylus is used), autosave to IndexedDB, save/open `.atelier` project files, import images as layers (or drag and drop them), PNG export, keyboard shortcuts (press `?` in the app).
+Undo/redo (80 steps, memory-capped; two-finger tap to undo on touch screens), pan/zoom (scroll, pinch, space-drag), straight lines with Shift-click, Alt/right-click colour picking, palm rejection (fingers pan once a stylus is used), autosave to IndexedDB, save/open `.atelier` project files, import images as layers (or drag and drop them), PNG export, keyboard shortcuts (press `?` in the app).
 
 ## Development
 

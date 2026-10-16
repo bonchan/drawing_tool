@@ -1,4 +1,5 @@
 import { BRUSHES, BRUSH_LIST, isBrushId, type BrushId, type BrushSettings } from '../engine/brushes'
+import type { Symmetry } from '../engine/Engine'
 import { createStore } from './store'
 
 export type ToolId = BrushId | 'fill' | 'eyedropper' | 'move' | 'hand'
@@ -19,6 +20,7 @@ export interface ToolState {
   color: string
   secondary: string
   recent: string[]
+  symmetry: Symmetry
 }
 
 const STORAGE_KEY = 'atelier.tools.v1'
@@ -32,6 +34,7 @@ function defaults(): ToolState {
     color: '#2f6fb3',
     secondary: '#ffffff',
     recent: ['#2f6fb3', '#c23b3b', '#e8b33a', '#3e8e5a', '#2a2a2e'],
+    symmetry: 'off',
   }
 }
 
@@ -65,8 +68,11 @@ toolStore.subscribe(() => {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     try {
-      const { tool, lastBrush, settings, fill, color, secondary, recent } = toolStore.get()
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tool: tool === 'hand' ? lastBrush : tool, lastBrush, settings, fill, color, secondary, recent }))
+      const { tool, lastBrush, settings, fill, color, secondary, recent, symmetry } = toolStore.get()
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ tool: tool === 'hand' ? lastBrush : tool, lastBrush, settings, fill, color, secondary, recent, symmetry }),
+      )
     } catch {
       /* storage unavailable – preferences just won't persist */
     }
@@ -82,6 +88,9 @@ export const tools = {
   },
   resetBrush(id: BrushId) {
     toolStore.set((s) => ({ settings: { ...s.settings, [id]: { ...BRUSHES[id].defaults } } }))
+  },
+  setSymmetry(symmetry: Symmetry) {
+    toolStore.set({ symmetry })
   },
   setFill(patch: Partial<FillSettings>) {
     toolStore.set((s) => ({ fill: { ...s.fill, ...patch } }))

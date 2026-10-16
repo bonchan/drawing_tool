@@ -387,6 +387,23 @@ kbd {
   height: 34px;
 }
 
+.symmetry-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.symmetry-row .mini-label {
+  margin: 0;
+}
+.symmetry-row .segmented {
+  flex: 1;
+}
+.symmetry-row .segmented button {
+  height: 22px;
+  font-size: 11px;
+}
 .tool-settings {
   display: flex;
   flex-direction: column;

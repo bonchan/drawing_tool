@@ -2,11 +2,17 @@ import { PaletteAnalyzer } from './analysis/analyzer'
 import { Engine } from './engine/Engine'
 import { loadAutosave, saveAutosave } from './engine/persistence'
 import { getEdgeNoise, getLowNoise, getPaperGrain } from './engine/textures'
+import { toolStore } from './state/tools'
 import { uiStore, view, viewStore } from './state/ui'
 
 /** The single document engine and its live colour analyser. */
 export const engine = new Engine(1800, 1200)
 export const analyzer = new PaletteAnalyzer(engine)
+
+engine.symmetry = toolStore.get().symmetry
+toolStore.subscribe(() => {
+  engine.symmetry = toolStore.get().symmetry
+})
 
 // ------------------------------------------------------------------ autosave
 

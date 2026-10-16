@@ -6,11 +6,10 @@ import type { InputPoint } from '../engine/stroke'
 import { get2d, getCheckerTile } from '../engine/textures'
 import { toolStore, tools, type ToolId } from '../state/tools'
 import { cursorStore, ui, view, viewStore } from '../state/ui'
+import { isTyping, releaseFocus } from '../lib/dom'
 
 type Mode = 'idle' | 'paint' | 'pan' | 'move' | 'pick' | 'gesture'
 
-const isTyping = (t: EventTarget | null) =>
-  t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)
 
 export function CanvasView() {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -109,9 +108,41 @@ export function CanvasView() {
       return t
     }
 
+    const drawGuides = () => {
+      const sym = toolStore.get().symmetry
+      if (sym === 'off') return
+      const v = viewStore.get()
+      const k = dpr * v.zoom
+      const cx = (v.panX + (engine.width / 2) * v.zoom) * dpr
+      const cy = (v.panY + (engine.height / 2) * v.zoom) * dpr
+      const angles = sym === 'mirror' ? [90] : sym === 'quad' ? [0, 90] : [90, 30, 150]
+      octx.save()
+      octx.beginPath()
+      octx.rect(v.panX * dpr, v.panY * dpr, engine.width * k, engine.height * k)
+      octx.clip()
+      const L = Math.hypot(engine.width, engine.height) * k
+      for (const [color, w, dash] of [
+        ['rgba(0,0,0,.35)', 3, []],
+        ['rgba(126,166,255,.95)', 1.25, [6, 5]],
+      ] as const) {
+        octx.strokeStyle = color
+        octx.lineWidth = w * dpr
+        octx.setLineDash(dash.map((n) => n * dpr))
+        octx.beginPath()
+        for (const deg of angles) {
+          const a = (deg * Math.PI) / 180
+          octx.moveTo(cx - Math.cos(a) * L, cy - Math.sin(a) * L)
+          octx.lineTo(cx + Math.cos(a) * L, cy + Math.sin(a) * L)
+        }
+        octx.stroke()
+      }
+      octx.restore()
+    }
+
     const drawOverlay = () => {
       octx.setTransform(1, 0, 0, 1, 0, 0)
       octx.clearRect(0, 0, overlay.width, overlay.height)
+      drawGuides()
       if (!cursor || mode === 'pan' || mode === 'gesture') return
       const cx = cursor.x * dpr
       const cy = cursor.y * dpr
@@ -277,6 +308,9 @@ export function CanvasView() {
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'pen') penSeenAt = performance.now()
+      // preventDefault below stops the canvas from taking focus, so release it
+      // explicitly – otherwise a focused slider or text field swallows shortcuts.
+      releaseFocus()
       cursor = local(e)
       if (e.pointerType === 'touch') {
         touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -465,6 +499,8 @@ export function CanvasView() {
       if (e.code === 'Space' && !spaceDown) {
         spaceDown = true
         e.preventDefault()
+        // don't let Space also "click" whichever button has focus
+        if (document.activeElement instanceof HTMLButtonElement) releaseFocus()
         updateCursorStyle()
         overlayDirty = true
       }

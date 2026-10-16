@@ -16,6 +16,7 @@ import { MAX_LAYERS } from './engine/Engine'
 import { useStore } from './state/store'
 import { tools, type ToolId } from './state/tools'
 import { ui, uiStore, view } from './state/ui'
+import { isTyping } from './lib/dom'
 
 const TOOL_KEYS: Record<string, ToolId> = {
   ...Object.fromEntries(BRUSH_LIST.filter((b) => b.shortcut).map((b) => [b.shortcut!.toLowerCase(), b.id])),
@@ -25,8 +26,6 @@ const TOOL_KEYS: Record<string, ToolId> = {
   h: 'hand',
 }
 
-const isTyping = (t: EventTarget | null) =>
-  t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)
 
 function useShortcuts() {
   useEffect(() => {

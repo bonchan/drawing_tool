@@ -84,6 +84,12 @@ export interface BrushDef<S = unknown> {
   dab(ctx: PaintContext, d: Dab, state: S): void
   /** Optional finishing pass. May return a grown dirty rect (e.g. watercolor bleeding). */
   end?(ctx: PaintContext, state: S, bounds: Rect): Rect | void
+  /**
+   * 'post' (default): `end` post-processes the whole buffer once.
+   * 'rerender': `end` redraws its own stroke; the caller clears the buffer
+   * first and calls it once per symmetric copy.
+   */
+  endMode?: 'post' | 'rerender'
   /** Keep depositing while the pointer is held still (airbrush, spray). */
   continuous?: boolean
   /** The finishing pass already applied opacity into the buffer pixels. */

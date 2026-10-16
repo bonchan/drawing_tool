@@ -164,6 +164,7 @@ export function renderBrushPreview(
       x1: Math.min(W, Math.ceil(bounds.x1)),
       y1: Math.min(H, Math.ceil(bounds.y1)),
     }
+    if (brush.endMode === 'rerender') buf.clearRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
     brush.end(ctx, state, b)
   }
   if (brush.target === 'buffer') {

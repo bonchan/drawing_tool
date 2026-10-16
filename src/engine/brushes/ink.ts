@@ -83,14 +83,23 @@ export const ink: BrushDef<InkState> = {
     st.pts.push({ x: d.x, y: d.y, r, dist: d.dist })
     capsuleDab(ctx, d, st.cap, r)
   },
-  end(ctx, st, bounds) {
+  endMode: 'rerender',
+  end(ctx, st) {
     const s = ctx.s
-    if (s.taper <= 0 || st.pts.length < 3) return
+    if (st.pts.length === 0) return
+    if (s.taper <= 0 || st.pts.length < 3) {
+      // nothing to taper: just put the plain stroke back
+      solid(ctx)
+      let prev = st.pts[0]
+      for (const p of st.pts) {
+        capsule(ctx.buf, prev.x, prev.y, prev.r, p.x, p.y, p.r)
+        prev = p
+      }
+      return
+    }
     const total = st.pts[st.pts.length - 1].dist
-    const taperLen = Math.min(total * 0.45, s.size * 4 * s.taper)
-    if (taperLen < 1) return
-    // Re-render the whole stroke with a pointed tail.
-    ctx.buf.clearRect(bounds.x0, bounds.y0, bounds.x1 - bounds.x0, bounds.y1 - bounds.y0)
+    const taperLen = Math.max(1, Math.min(total * 0.45, s.size * 4 * s.taper))
+    // Re-render the whole stroke with a pointed tail (the caller cleared the buffer).
     solid(ctx)
     let prev = st.pts[0]
     for (let i = 0; i < st.pts.length; i++) {
