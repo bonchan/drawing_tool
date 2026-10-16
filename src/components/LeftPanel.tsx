@@ -61,7 +61,7 @@ function BrushLibrary() {
                 <span className="brush-card-name">{b.name}</span>
                 {b.shortcut && <kbd>{b.shortcut}</kbd>}
               </span>
-              <BrushPreview id={b.id} height={30} maxSize={13} amplitude={0.2} />
+              <BrushPreview id={b.id} height={30} maxSize={13} amplitude={0.2} delay={140} />
             </button>
           ))}
         </div>

@@ -4,6 +4,8 @@ A natural-media painting app built with **React + Vite + TypeScript** (pnpm), de
 
 **Live:** https://bonchan.github.io/drawing_tool/
 
+![Atelier: a watercolor, oil and ink landscape with the live colour composition panel](docs/screenshot.jpg)
+
 ## Features
 
 ### Brushes

@@ -10,11 +10,14 @@ export function BrushPreview({
   height,
   maxSize,
   amplitude,
+  delay = 0,
 }: {
   id: BrushId
   height: number
   maxSize: number
   amplitude?: number
+  /** Wait for changes to settle before re-rendering (used by the many library previews). */
+  delay?: number
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const settings = useStore(toolStore, (s) => s.settings[id])
@@ -24,16 +27,21 @@ export function BrushPreview({
   useEffect(() => {
     const c = ref.current
     if (!c) return
-    // Coalesce rapid changes (dragging the colour picker) into one render per frame.
-    const raf = requestAnimationFrame(() => {
+    // Coalesce rapid changes (dragging the colour picker) into one render.
+    let raf = 0
+    const render = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1)
       const w = Math.max(40, c.clientWidth)
       c.width = Math.round(w * dpr)
       c.height = Math.round(height * dpr)
       renderBrushPreview(c, id, settings, color, { paper, scale: dpr, maxSize, amplitude })
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [id, settings, color, paper, height, maxSize, amplitude])
+    }
+    const timer = setTimeout(() => (raf = requestAnimationFrame(render)), delay)
+    return () => {
+      clearTimeout(timer)
+      cancelAnimationFrame(raf)
+    }
+  }, [id, settings, color, paper, height, maxSize, amplitude, delay])
 
   return <canvas ref={ref} className="brush-preview" style={{ height }} aria-hidden />
 }
