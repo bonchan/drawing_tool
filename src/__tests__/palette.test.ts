@@ -55,6 +55,17 @@ describe('analyzePalette', () => {
     expect(r.swatches[0].share).toBeCloseTo(2 / 3, 5)
   })
 
+  it('keeps pale tints of different hues apart', () => {
+    const r = analyzePalette(req(grid([['#edcac5', 200, true], ['#d3dde5', 100, true]])))
+    expect(r.swatches).toHaveLength(2)
+    expect(r.swatches[0].share).toBeCloseTo(2 / 3, 5)
+  })
+
+  it('treats light and dark variants of one wash as one colour', () => {
+    const r = analyzePalette(req(grid([['#d3dde5', 200, true], ['#bbcddd', 100, true], ['#a3bdd5', 30, true]])))
+    expect(r.swatches).toHaveLength(1)
+  })
+
   it('separates more colours at higher detail', () => {
     const g = grid([['#2f6fb3', 100, true], ['#4a86c6', 100, true], ['#1d4f8a', 100, true]])
     const coarse = analyzePalette(req(g, { mergeDistance: 0.17 }))

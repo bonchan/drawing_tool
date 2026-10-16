@@ -410,7 +410,12 @@ export function CanvasView() {
       } else if (mode === 'move') {
         engine.endMove()
       } else if (mode === 'pick') {
-        if (pickColor) tools.pushRecent(pickColor)
+        if (pickColor) {
+          tools.pushRecent(pickColor)
+          // A deliberate eyedropper pick goes straight back to painting.
+          const { tool, lastBrush } = toolStore.get()
+          if (tool === 'eyedropper') tools.setTool(lastBrush)
+        }
         pickColor = null
         pickPrev = null
       }

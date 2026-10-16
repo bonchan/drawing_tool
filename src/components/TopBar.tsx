@@ -101,14 +101,14 @@ export function TopBar() {
         <IconButton label={redoLabel ? `Redo ${redoLabel}` : 'Redo'} shortcut="Ctrl+Shift+Z" disabled={!canRedo} onClick={() => engine.redo()}>
           <Redo2 size={17} />
         </IconButton>
-        <span className="topbar-sep" />
-        <IconButton label="Zoom out" shortcut="−" onClick={() => view.zoomBy(1 / 1.25)}>
+        <span className="topbar-sep hide-sm" />
+        <IconButton label="Zoom out" shortcut="−" className="hide-sm" onClick={() => view.zoomBy(1 / 1.25)}>
           <ZoomOut size={17} />
         </IconButton>
         <button type="button" className="zoom-readout" onClick={() => view.actualSize(docW, docH)} data-tip="Actual size  ·  Ctrl+1">
           {Math.round(zoom * 100)}%
         </button>
-        <IconButton label="Zoom in" shortcut="+" onClick={() => view.zoomBy(1.25)}>
+        <IconButton label="Zoom in" shortcut="+" className="hide-sm" onClick={() => view.zoomBy(1.25)}>
           <ZoomIn size={17} />
         </IconButton>
         <IconButton label="Fit to screen" shortcut="Ctrl+0" onClick={() => view.fit(docW, docH)}>
@@ -123,10 +123,10 @@ export function TopBar() {
         <IconButton label="Open project" shortcut="Ctrl+O" onClick={() => fileRef.current?.click()}>
           <FolderOpen size={17} />
         </IconButton>
-        <IconButton label="Import image as layer" onClick={() => imageRef.current?.click()}>
+        <IconButton label="Import image as layer" className="hide-sm" onClick={() => imageRef.current?.click()}>
           <ImagePlus size={17} />
         </IconButton>
-        <IconButton label="Save project file" shortcut="Ctrl+S" onClick={saveProject}>
+        <IconButton label="Save project file" shortcut="Ctrl+S" className="hide-sm" onClick={saveProject}>
           <Save size={17} />
         </IconButton>
         <button type="button" className="btn btn-primary" onClick={exportPng} data-tip="Export PNG  ·  Ctrl+Shift+E">

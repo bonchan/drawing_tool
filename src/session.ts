@@ -1,6 +1,7 @@
 import { PaletteAnalyzer } from './analysis/analyzer'
 import { Engine } from './engine/Engine'
 import { loadAutosave, saveAutosave } from './engine/persistence'
+import { getEdgeNoise, getLowNoise, getPaperGrain } from './engine/textures'
 import { uiStore, view, viewStore } from './state/ui'
 
 /** The single document engine and its live colour analyser. */
@@ -51,6 +52,14 @@ async function restore() {
   }
   restoring = false
   view.fit(engine.width, engine.height)
+  // Generate the procedural noise textures before the first watercolor/pencil stroke needs them.
+  const warm = () => {
+    getEdgeNoise()
+    getLowNoise()
+    getPaperGrain()
+  }
+  if ('requestIdleCallback' in window) requestIdleCallback(warm, { timeout: 2000 })
+  else setTimeout(warm, 500)
 }
 
 // Handy for debugging from the console during development.

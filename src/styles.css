@@ -1484,6 +1484,25 @@ button.comp-row:hover,
     gap: 4px;
     padding: 0 4px;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .topbar::-webkit-scrollbar {
+    display: none;
+  }
+  .topbar-group {
+    flex: none;
+  }
+  .hide-sm {
+    display: none !important;
+  }
+  .brand {
+    padding: 0 2px;
+  }
+  .zoom-readout {
+    min-width: 44px;
+  }
+  .topbar .icon-btn {
+    width: 30px;
   }
   .btn-primary span {
     display: none;

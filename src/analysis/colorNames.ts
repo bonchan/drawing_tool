@@ -1,4 +1,4 @@
-import { hexToRgb, labDistance, rgbToOklab, type Lab, type RGB } from '../engine/color'
+import { hexToRgb, rgbToOklab, type Lab, type RGB } from '../engine/color'
 
 /** A painterly colour vocabulary: pigment names mixed with familiar everyday names. */
 const NAMES: Array<[string, string]> = [
@@ -14,6 +14,10 @@ const NAMES: Array<[string, string]> = [
   ['Pale Peach', '#f8e1cf'],
   ['Pale Yellow', '#faf1c2'],
   ['Pale Lilac', '#e4dcf0'],
+  ['Light Blue Gray', '#c4d2df'],
+  ['Blue Gray', '#8ea3b8'],
+  ['Sage Gray', '#b3bdab'],
+  ['Mushroom', '#bdb1a3'],
   ['Silver', '#c0c0c0'],
   ['Light Gray', '#d3d3d3'],
   ['Gray', '#808080'],
@@ -130,7 +134,11 @@ export function nameColor(rgb: RGB, lab: Lab = rgbToOklab(rgb)): string {
   let best = TABLE[0]
   let bestD = Infinity
   for (const e of TABLE) {
-    const d = labDistance(lab, e.lab)
+    // Favour matching hue/chroma over exact lightness, like people name colours.
+    const dl = (lab[0] - e.lab[0]) * 0.65
+    const da = lab[1] - e.lab[1]
+    const db = lab[2] - e.lab[2]
+    const d = dl * dl + da * da + db * db
     if (d < bestD) {
       bestD = d
       best = e

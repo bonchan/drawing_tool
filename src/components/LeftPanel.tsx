@@ -2,6 +2,7 @@ import { Eraser, FingerprintPattern, Hand, Move, PaintBucket, Paintbrush, Pipett
 import { BRUSHES, BRUSH_GROUPS, isBrushId, type BrushId } from '../engine/brushes'
 import { useStore } from '../state/store'
 import { toolStore, tools, type ToolId } from '../state/tools'
+import { uiStore } from '../state/ui'
 import { BrushPreview } from './BrushPreview'
 import { IconButton, Section, Slider, Toggle } from './kit'
 
@@ -49,7 +50,11 @@ function BrushLibrary() {
               key={b.id}
               type="button"
               className={`brush-card ${tool === b.id ? 'is-active' : ''}`}
-              onClick={() => tools.setTool(b.id)}
+              onClick={() => {
+                tools.setTool(b.id)
+                // On small screens the panel covers the canvas – get out of the way.
+                if (window.innerWidth < 900) uiStore.set({ leftOpen: false })
+              }}
               title={b.description}
             >
               <span className="brush-card-head">

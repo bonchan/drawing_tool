@@ -291,12 +291,36 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   return result
 }
 
-function distTo(lab: Lab, c: { l: number; a: number; b: number }) {
-  const dl = lab[0] - c.l
-  const da = lab[1] - c.a
-  const db = lab[2] - c.b
-  return Math.sqrt(dl * dl + da * da + db * db)
+/**
+ * Perceptual distance used for grouping:
+ * - lightness counts for less than hue/chroma, so a wash with darker dried rims
+ *   or a shaded stroke still reads as one colour;
+ * - hue differences between pale (low-chroma) tints are boosted, so a pale pink
+ *   and a pale blue wash never collapse into one group.
+ */
+const L_WEIGHT = 0.5
+const HUE_FLOOR = 0.06
+
+export function paletteDistance(lab: Lab, c: { l: number; a: number; b: number }) {
+  const dl = (lab[0] - c.l) * L_WEIGHT
+  const c1 = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2])
+  const c2 = Math.sqrt(c.a * c.a + c.b * c.b)
+  const dc = c1 - c2
+  let dh2: number
+  if (c1 > 0.015 && c2 > 0.015) {
+    const cos = (lab[1] * c.a + lab[2] * c.b) / (c1 * c2)
+    const sinHalf2 = Math.max(0, (1 - cos) / 2)
+    const k = Math.max(Math.sqrt(c1 * c2), HUE_FLOOR)
+    dh2 = 4 * k * k * sinHalf2
+  } else {
+    const da = lab[1] - c.a
+    const db = lab[2] - c.b
+    dh2 = Math.max(0, da * da + db * db - dc * dc)
+  }
+  return Math.sqrt(dl * dl + dc * dc + dh2)
 }
+
+const distTo = paletteDistance
 
 export function familyOf(lab: Lab): FamilyName {
   const [L, C, h] = labToLch(lab)
