@@ -59,23 +59,41 @@ export const smudge: BrushDef<SmudgeState> = {
     const s = ctx.s
     const D = st.d
     const r = D / 2
-    const strength = clamp(s.strength * (0.45 + 0.55 * dab.pressure), 0, 0.98)
-    // 1. lay the carried paint down through a soft round mask
+    const k = clamp(s.strength * (0.45 + 0.55 * dab.pressure), 0, 0.98)
+    const mask = getRoundDab([0, 0, 0], s.hardness)
+    // All mixing happens in premultiplied space with destination-out + lighter,
+    // i.e. a true lerp – so smudging into empty areas thins the paint out
+    // instead of dragging an endless trail of colour.
+    // 1. carried paint through the soft brush mask
     const tmp = ctx.scratch(D, D)
-    tmp.globalCompositeOperation = 'copy'
     tmp.globalAlpha = 1
+    tmp.globalCompositeOperation = 'copy'
     tmp.drawImage(st.carry, 0, 0)
     tmp.globalCompositeOperation = 'destination-in'
-    tmp.drawImage(getRoundDab([0, 0, 0], s.hardness), 0, 0, D, D)
+    tmp.drawImage(mask, 0, 0, D, D)
     tmp.globalCompositeOperation = 'source-over'
+    // 2. layer = layer·(1 − k·mask) + carry·mask·k
     const L = ctx.layer
-    L.globalAlpha = strength
+    L.save()
+    L.beginPath()
+    L.rect(dab.x - r, dab.y - r, D, D)
+    L.clip()
+    L.globalAlpha = k
+    L.globalCompositeOperation = 'destination-out'
+    L.drawImage(mask, dab.x - r, dab.y - r, D, D)
+    L.globalCompositeOperation = 'lighter'
     L.drawImage(tmp.canvas, 0, 0, D, D, dab.x - r, dab.y - r, D, D)
-    L.globalAlpha = 1
-    // 2. pick up a little of what is under the brush now
-    st.carryCtx.globalAlpha = 1 - strength
-    st.carryCtx.drawImage(L.canvas, dab.x - r, dab.y - r, D, D, 0, 0, D, D)
-    st.carryCtx.globalAlpha = 1
+    L.restore()
+    // 3. carry = carry·k + under·(1 − k)
+    const c = st.carryCtx
+    c.globalAlpha = 1 - k
+    c.globalCompositeOperation = 'destination-out'
+    c.fillStyle = '#000'
+    c.fillRect(0, 0, D, D)
+    c.globalCompositeOperation = 'lighter'
+    c.drawImage(L.canvas, dab.x - r, dab.y - r, D, D, 0, 0, D, D)
+    c.globalAlpha = 1
+    c.globalCompositeOperation = 'source-over'
     markCircle(ctx, dab.x, dab.y, r)
   },
 }

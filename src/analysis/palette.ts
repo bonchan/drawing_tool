@@ -59,9 +59,9 @@ export interface PaletteResult {
 
 const BINS = 32768
 const NEUTRAL_CHROMA = 0.035
-const PAINT_ALPHA = 24
+const PAINT_ALPHA = 38
 /** Painted pixels this close to the paper colour are visually just paper. */
-const PAPER_LIKE = 0.022
+const PAPER_LIKE = 0.03
 
 interface Cluster {
   l: number

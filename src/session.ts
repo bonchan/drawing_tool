@@ -12,20 +12,34 @@ export const analyzer = new PaletteAnalyzer(engine)
 
 let restoring = true
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+let dirty = false
+let saving: Promise<void> | null = null
+
+async function saveNow() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = null
+  if (!dirty || restoring) return
+  if (engine.isStroking) return scheduleSave()
+  if (saving) await saving
+  dirty = false
+  uiStore.set({ saving: 'saving' })
+  saving = saveAutosave(engine)
+    .then(() => uiStore.set({ saving: dirty ? 'saving' : 'saved' }))
+    .catch(() => {
+      dirty = true
+      uiStore.set({ saving: 'error' })
+    })
+    .finally(() => {
+      saving = null
+    })
+  await saving
+}
 
 function scheduleSave() {
   if (restoring) return
+  dirty = true
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(async () => {
-    if (engine.isStroking) return scheduleSave()
-    uiStore.set({ saving: 'saving' })
-    try {
-      await saveAutosave(engine)
-      uiStore.set({ saving: 'saved' })
-    } catch {
-      uiStore.set({ saving: 'error' })
-    }
-  }, 1500)
+  saveTimer = setTimeout(saveNow, 900)
 }
 
 engine.onContentChange((live) => {
@@ -33,6 +47,19 @@ engine.onContentChange((live) => {
 })
 // Layer renames / locks don't change pixels but should still be saved.
 engine.subscribe(() => scheduleSave())
+
+// Save straight away when the tab is hidden or closed, and warn if a save
+// genuinely could not finish in time.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') void saveNow()
+})
+window.addEventListener('pagehide', () => void saveNow())
+window.addEventListener('beforeunload', (e) => {
+  if (dirty || saving) {
+    void saveNow()
+    e.preventDefault()
+  }
+})
 
 let restoring$: Promise<void> | null = null
 

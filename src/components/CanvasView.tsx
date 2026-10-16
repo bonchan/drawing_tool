@@ -42,7 +42,7 @@ export function CanvasView() {
     const pan = { sx: 0, sy: 0, px: 0, py: 0 }
     const moveStart = { x: 0, y: 0 }
     const touches = new Map<number, { x: number; y: number }>()
-    const gesture = { d0: 1, mx: 0, my: 0, z0: 1, px: 0, py: 0 }
+    const gesture = { d0: 1, mx: 0, my: 0, z0: 1, px: 0, py: 0, t0: 0, moved: false, fingers: 0 }
 
     // ---------------------------------------------------------- sizing
 
@@ -269,6 +269,9 @@ export function CanvasView() {
       gesture.z0 = v.zoom
       gesture.px = v.panX
       gesture.py = v.panY
+      gesture.t0 = performance.now()
+      gesture.moved = false
+      gesture.fingers = 2
       mode = 'gesture'
     }
 
@@ -283,7 +286,10 @@ export function CanvasView() {
           startGesture()
           return
         }
-        if (touches.size > 2) return
+        if (touches.size > 2) {
+          gesture.fingers = Math.max(gesture.fingers, touches.size)
+          return
+        }
       }
       if (mode !== 'idle') return
       try {
@@ -365,7 +371,10 @@ export function CanvasView() {
           const r = overlay.getBoundingClientRect()
           const mx = (a.x + b.x) / 2 - r.left
           const my = (a.y + b.y) / 2 - r.top
-          const z = Math.max(0.05, Math.min(32, gesture.z0 * (Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0)))
+          const ratio = Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0
+          if (Math.abs(ratio - 1) > 0.06 || Math.hypot(mx - gesture.mx, my - gesture.my) > 10) gesture.moved = true
+          if (!gesture.moved) return
+          const z = Math.max(0.05, Math.min(32, gesture.z0 * ratio))
           const docX = (gesture.mx - gesture.px) / gesture.z0
           const docY = (gesture.my - gesture.py) / gesture.z0
           viewStore.set({ zoom: z, panX: mx - docX * z, panY: my - docY * z })
@@ -397,7 +406,14 @@ export function CanvasView() {
       if (e.pointerType === 'touch') {
         touches.delete(e.pointerId)
         if (mode === 'gesture') {
-          if (touches.size === 0) mode = 'idle'
+          if (touches.size === 0) {
+            mode = 'idle'
+            // Quick two-finger tap = undo, three-finger tap = redo.
+            if (!gesture.moved && performance.now() - gesture.t0 < 320) {
+              if (gesture.fingers === 2) engine.undo()
+              else if (gesture.fingers >= 3) engine.redo()
+            }
+          }
           return
         }
       }
