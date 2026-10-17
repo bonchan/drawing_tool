@@ -27,6 +27,34 @@ export interface AnalysisState {
 
 const SAMPLE_MAX = 300
 const LIVE_INTERVAL = 110
+const OPTIONS_KEY = 'atelier.analysis.v1'
+
+export const DEFAULT_OPTIONS: AnalysisOptions = { scope: 'visible', includePaper: true, detail: 0.5, maxColors: 12 }
+
+/** Analysis settings survive reloads. */
+function loadOptions(): AnalysisOptions {
+  try {
+    const raw = localStorage.getItem(OPTIONS_KEY)
+    if (!raw) return { ...DEFAULT_OPTIONS }
+    const saved = JSON.parse(raw) as Partial<AnalysisOptions>
+    return {
+      scope: saved.scope === 'active' ? 'active' : 'visible',
+      includePaper: typeof saved.includePaper === 'boolean' ? saved.includePaper : DEFAULT_OPTIONS.includePaper,
+      detail: typeof saved.detail === 'number' && saved.detail >= 0 && saved.detail <= 1 ? saved.detail : DEFAULT_OPTIONS.detail,
+      maxColors: typeof saved.maxColors === 'number' && saved.maxColors >= 4 ? Math.min(32, saved.maxColors) : DEFAULT_OPTIONS.maxColors,
+    }
+  } catch {
+    return { ...DEFAULT_OPTIONS }
+  }
+}
+
+function saveOptions(opts: AnalysisOptions) {
+  try {
+    localStorage.setItem(OPTIONS_KEY, JSON.stringify(opts))
+  } catch {
+    /* storage unavailable – options just won't persist */
+  }
+}
 
 export function mergeDistanceFor(detail: number) {
   return 0.17 * Math.pow(0.024 / 0.17, Math.max(0, Math.min(1, detail)))
@@ -54,7 +82,7 @@ export class PaletteAnalyzer {
     this.state = {
       result: null,
       swatches: [],
-      options: { scope: 'visible', includePaper: false, detail: 0.5, maxColors: 12 },
+      options: loadOptions(),
       took: 0,
       updates: 0,
     }
@@ -86,6 +114,7 @@ export class PaletteAnalyzer {
 
   setOptions(opts: Partial<AnalysisOptions>) {
     this.state = { ...this.state, options: { ...this.state.options, ...opts } }
+    saveOptions(this.state.options)
     this.emit()
     this.schedule(false)
   }

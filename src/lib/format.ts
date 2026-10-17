@@ -1,6 +1,9 @@
-export function formatValue(v: number, unit?: string) {
-  if (unit === '%') return `${Math.round(v * 100)}%`
-  if (unit === 'px') return v < 10 ? `${(Math.round(v * 10) / 10).toString()}px` : `${Math.round(v)}px`
+import type { I18n } from '../i18n'
+
+/** Slider read-outs in the current language ("50%" / "50 %", "2.5px" / "2,5 px"). */
+export function formatValue({ percent, number }: I18n, v: number, unit?: string) {
+  if (unit === '%') return percent(v)
+  if (unit === 'px') return `${number(v, v < 10 ? 1 : 0)}px`
   if (unit === '°') return `${Math.round(v)}°`
-  return `${Math.round(v * 100) / 100}`
+  return number(v, 2)
 }

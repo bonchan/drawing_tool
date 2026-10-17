@@ -14,14 +14,19 @@ import {
   ZoomOut,
 } from 'lucide-react'
 import { useRef } from 'react'
-import { engine } from '../session'
-import { exportPng, openFile, saveProject } from '../lib/actions'
 import { useDoc } from '../hooks/useApp'
+import { useI18n } from '../i18n'
+import { exportPng, openFile, saveProject } from '../lib/actions'
+import { historyLabel } from '../lib/labels'
+import { engine } from '../session'
 import { useStore } from '../state/store'
 import { ui, uiStore, view, viewStore } from '../state/ui'
 import { IconButton } from './kit'
+import { LanguageSelect } from './LanguageSelect'
 
 export function TopBar() {
+  const i18n = useI18n()
+  const { t } = i18n
   const canUndo = useDoc((s) => s.canUndo)
   const canRedo = useDoc((s) => s.canRedo)
   const undoLabel = useDoc((s) => s.undoLabel)
@@ -37,10 +42,10 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-group">
-        <IconButton label="Toggle tools panel" shortcut="Tab" active={leftOpen} onClick={() => uiStore.set({ leftOpen: !leftOpen })}>
+        <IconButton label={t('topbar.toggleTools')} shortcut="Tab" active={leftOpen} onClick={() => uiStore.set({ leftOpen: !leftOpen })}>
           <PanelLeft size={17} />
         </IconButton>
-        <div className="brand" aria-label="Atelier">
+        <div className="brand" aria-label={t('app.name')}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
             <defs>
               <linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1">
@@ -54,53 +59,64 @@ export function TopBar() {
             <circle cx="10.6" cy="6.9" r="1.5" fill="#1b1b1f" />
             <circle cx="15.4" cy="7.2" r="1.5" fill="#1b1b1f" />
           </svg>
-          <span>Atelier</span>
+          <span>{t('app.name')}</span>
         </div>
       </div>
 
       <div className="topbar-group">
-        <IconButton label={undoLabel ? `Undo ${undoLabel}` : 'Undo'} shortcut="Ctrl+Z" disabled={!canUndo} onClick={() => engine.undo()}>
+        <IconButton
+          label={undoLabel ? t('topbar.undoWhat', { what: historyLabel(i18n, undoLabel) }) : t('topbar.undo')}
+          shortcut="Ctrl+Z"
+          disabled={!canUndo}
+          onClick={() => engine.undo()}
+        >
           <Undo2 size={17} />
         </IconButton>
-        <IconButton label={redoLabel ? `Redo ${redoLabel}` : 'Redo'} shortcut="Ctrl+Shift+Z" disabled={!canRedo} onClick={() => engine.redo()}>
+        <IconButton
+          label={redoLabel ? t('topbar.redoWhat', { what: historyLabel(i18n, redoLabel) }) : t('topbar.redo')}
+          shortcut="Ctrl+Shift+Z"
+          disabled={!canRedo}
+          onClick={() => engine.redo()}
+        >
           <Redo2 size={17} />
         </IconButton>
         <span className="topbar-sep hide-sm" />
-        <IconButton label="Zoom out" shortcut="−" className="hide-sm" onClick={() => view.zoomBy(1 / 1.25)}>
+        <IconButton label={t('topbar.zoomOut')} shortcut="−" className="hide-sm" onClick={() => view.zoomBy(1 / 1.25)}>
           <ZoomOut size={17} />
         </IconButton>
-        <button type="button" className="zoom-readout" onClick={() => view.actualSize(docW, docH)} data-tip="Actual size  ·  Ctrl+1">
-          {Math.round(zoom * 100)}%
+        <button type="button" className="zoom-readout" onClick={() => view.actualSize(docW, docH)} data-tip={`${t('topbar.actualSize')}  ·  Ctrl+1`}>
+          {i18n.percent(zoom)}
         </button>
-        <IconButton label="Zoom in" shortcut="+" className="hide-sm" onClick={() => view.zoomBy(1.25)}>
+        <IconButton label={t('topbar.zoomIn')} shortcut="+" className="hide-sm" onClick={() => view.zoomBy(1.25)}>
           <ZoomIn size={17} />
         </IconButton>
-        <IconButton label="Fit to screen" shortcut="Ctrl+0" onClick={() => view.fit(docW, docH)}>
+        <IconButton label={t('topbar.fit')} shortcut="Ctrl+0" onClick={() => view.fit(docW, docH)}>
           <Maximize size={16} />
         </IconButton>
       </div>
 
       <div className="topbar-group">
-        <IconButton label="New canvas" onClick={() => ui.openDialog('new')}>
+        <IconButton label={t('topbar.newCanvas')} onClick={() => ui.openDialog('new')}>
           <FilePlus size={17} />
         </IconButton>
-        <IconButton label="Open project" shortcut="Ctrl+O" onClick={() => fileRef.current?.click()}>
+        <IconButton label={t('topbar.open')} shortcut="Ctrl+O" onClick={() => fileRef.current?.click()}>
           <FolderOpen size={17} />
         </IconButton>
-        <IconButton label="Import image as layer" className="hide-sm" onClick={() => imageRef.current?.click()}>
+        <IconButton label={t('topbar.importImage')} className="hide-sm" onClick={() => imageRef.current?.click()}>
           <ImagePlus size={17} />
         </IconButton>
-        <IconButton label="Save project file" shortcut="Ctrl+S" className="hide-sm" onClick={saveProject}>
+        <IconButton label={t('topbar.save')} shortcut="Ctrl+S" className="hide-sm" onClick={saveProject}>
           <Save size={17} />
         </IconButton>
-        <button type="button" className="btn btn-primary" onClick={exportPng} data-tip="Export PNG  ·  Ctrl+Shift+E">
+        <button type="button" className="btn btn-primary" onClick={exportPng} data-tip={`${t('topbar.exportPng')}  ·  Ctrl+Shift+E`}>
           <Download size={15} />
-          <span>Export</span>
+          <span>{t('topbar.export')}</span>
         </button>
-        <IconButton label="Shortcuts & tips" shortcut="?" onClick={() => ui.openDialog('shortcuts')}>
+        <LanguageSelect />
+        <IconButton label={t('topbar.help')} shortcut="?" className="hide-sm" onClick={() => ui.openDialog('shortcuts')}>
           <CircleQuestionMark size={17} />
         </IconButton>
-        <IconButton label="Toggle side panel" active={rightOpen} onClick={() => uiStore.set({ rightOpen: !rightOpen })}>
+        <IconButton label={t('topbar.toggleSide')} active={rightOpen} onClick={() => uiStore.set({ rightOpen: !rightOpen })}>
           <PanelRight size={17} />
         </IconButton>
       </div>

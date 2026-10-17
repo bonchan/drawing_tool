@@ -66,10 +66,13 @@ export async function exportProject(engine: Engine): Promise<Blob> {
   return new Blob([JSON.stringify(file)], { type: 'application/json' })
 }
 
+/** Error message used when a file isn't an Atelier project (translated by the UI). */
+export const NOT_A_PROJECT = 'NOT_A_PROJECT'
+
 export async function parseProject(text: string): Promise<SerializedDoc> {
   const file = JSON.parse(text) as ProjectFile
   if (file.app !== 'atelier' || file.version !== 1 || !Array.isArray(file.layers)) {
-    throw new Error('Not an Atelier project file')
+    throw new Error(NOT_A_PROJECT)
   }
   const layers = await Promise.all(
     file.layers.map(async (l) => ({ ...l, png: await (await fetch(l.png)).blob() })),

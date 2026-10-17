@@ -1,3 +1,4 @@
+import type { Messages } from '../../i18n/locales/en'
 import type { RGB } from '../color'
 import type { Dab, PressureMode } from '../stroke'
 
@@ -34,9 +35,14 @@ export interface Rect {
   y1: number
 }
 
+/** Translation keys (see i18n/locales) – brushes carry no display text. */
+export type ControlLabel = keyof Messages['controls']
+export type ControlHint = keyof Messages['hints']
+export type BrushGroupId = keyof Messages['brushGroups']
+
 export interface ControlDef {
   key: string
-  label: string
+  label: ControlLabel
   min: number
   max: number
   step?: number
@@ -44,7 +50,7 @@ export interface ControlDef {
   unit?: '%' | 'px' | '°' | ''
   /** Non-linear slider response, handy for brush size. */
   curve?: 'quad'
-  hint?: string
+  hint?: ControlHint
 }
 
 /** Everything a brush needs to paint, independent of the document (so previews can reuse it). */
@@ -68,9 +74,7 @@ export interface PaintContext {
 
 export interface BrushDef<S = unknown> {
   id: BrushId
-  name: string
-  group: 'Dry media' | 'Ink & pens' | 'Paint' | 'Utility'
-  description: string
+  group: BrushGroupId
   shortcut?: string
   /** 'buffer' paints into a stroke buffer merged on release (opacity acts as a ceiling). */
   target: 'buffer' | 'layer'
@@ -99,17 +103,17 @@ export interface BrushDef<S = unknown> {
 }
 
 export const COMMON = {
-  size: { key: 'size', label: 'Size', min: 1, max: 400, unit: 'px', curve: 'quad' } as ControlDef,
-  opacity: { key: 'opacity', label: 'Opacity', min: 0.01, max: 1, step: 0.01, unit: '%' } as ControlDef,
-  flow: { key: 'flow', label: 'Flow', min: 0.01, max: 1, step: 0.01, unit: '%' } as ControlDef,
-  hardness: { key: 'hardness', label: 'Hardness', min: 0, max: 1, step: 0.01, unit: '%' } as ControlDef,
+  size: { key: 'size', label: 'size', min: 1, max: 400, unit: 'px', curve: 'quad' } as ControlDef,
+  opacity: { key: 'opacity', label: 'opacity', min: 0.01, max: 1, step: 0.01, unit: '%' } as ControlDef,
+  flow: { key: 'flow', label: 'flow', min: 0.01, max: 1, step: 0.01, unit: '%' } as ControlDef,
+  hardness: { key: 'hardness', label: 'hardness', min: 0, max: 1, step: 0.01, unit: '%' } as ControlDef,
   smoothing: {
     key: 'smoothing',
-    label: 'Stabilizer',
+    label: 'smoothing',
     min: 0,
     max: 1,
     step: 0.01,
     unit: '%',
-    hint: 'Smooths out hand jitter',
+    hint: 'smoothing',
   } as ControlDef,
 }

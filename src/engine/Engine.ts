@@ -23,23 +23,23 @@ export type BlendMode =
   | 'color'
   | 'luminosity'
 
-export const BLEND_MODES: Array<{ id: BlendMode; label: string }> = [
-  { id: 'source-over', label: 'Normal' },
-  { id: 'multiply', label: 'Multiply' },
-  { id: 'screen', label: 'Screen' },
-  { id: 'overlay', label: 'Overlay' },
-  { id: 'darken', label: 'Darken' },
-  { id: 'lighten', label: 'Lighten' },
-  { id: 'color-dodge', label: 'Color dodge' },
-  { id: 'color-burn', label: 'Color burn' },
-  { id: 'hard-light', label: 'Hard light' },
-  { id: 'soft-light', label: 'Soft light' },
-  { id: 'difference', label: 'Difference' },
-  { id: 'exclusion', label: 'Exclusion' },
-  { id: 'hue', label: 'Hue' },
-  { id: 'saturation', label: 'Saturation' },
-  { id: 'color', label: 'Color' },
-  { id: 'luminosity', label: 'Luminosity' },
+export const BLEND_MODES: BlendMode[] = [
+  'source-over',
+  'multiply',
+  'screen',
+  'overlay',
+  'darken',
+  'lighten',
+  'color-dodge',
+  'color-burn',
+  'hard-light',
+  'soft-light',
+  'difference',
+  'exclusion',
+  'hue',
+  'saturation',
+  'color',
+  'luminosity',
 ]
 
 export interface LayerMeta {
@@ -75,9 +75,33 @@ export interface DocState {
   paper: Paper
   canUndo: boolean
   canRedo: boolean
-  undoLabel: string | null
-  redoLabel: string | null
+  undoLabel: HistoryLabel | null
+  redoLabel: HistoryLabel | null
   stroking: boolean
+}
+
+/** What an undo step did – a translation key (or a brush stroke), never display text. */
+export type HistoryLabel =
+  | 'newLayer'
+  | 'duplicateLayer'
+  | 'deleteLayer'
+  | 'reorderLayers'
+  | 'mergeDown'
+  | 'clearLayer'
+  | 'fill'
+  | 'moveLayer'
+  | `brush:${BrushId}`
+
+/** Why painting is refused on the active layer. */
+export interface BlockedReason {
+  reason: 'hidden' | 'locked'
+  layer: string
+}
+
+/** How new layers are named – set from the UI so names follow the language. */
+export interface LayerNaming {
+  layer(n: number): string
+  copy(name: string): string
 }
 
 export interface SerializedDoc {
@@ -108,7 +132,7 @@ interface ActiveStroke {
   bounds: Rect | null
   lastDab: Dab | null
   lastTick: number
-  label: string
+  label: HistoryLabel
   started: boolean
 }
 
@@ -138,7 +162,7 @@ export class Engine {
   private sampleCtx: CanvasRenderingContext2D
   private paperPattern: CanvasPattern | null = null
 
-  private history = new History()
+  private history = new History<HistoryLabel>()
   private stroke: ActiveStroke | null = null
   private moving: { layer: Layer; dx: number; dy: number } | null = null
   private dirty: Rect = emptyRect()
@@ -147,6 +171,8 @@ export class Engine {
   private state!: DocState
   private seed = 1
   private loadToken = 0
+  /** Layer naming (localised by the UI). */
+  naming: LayerNaming = { layer: (n) => `Layer ${n}`, copy: (name) => `${name} copy` }
   /** Mirror / radial painting around the canvas centre. */
   symmetry: Symmetry = 'off'
   /** End of the last stroke, for shift-click straight lines. */
@@ -166,7 +192,7 @@ export class Engine {
     this.scratchCanvas = createCanvas(256, 256)
     this.scratchCtx = get2d(this.scratchCanvas)
     this.sampleCtx = get2d(createCanvas(4, 4), { willReadFrequently: true })
-    this.addLayerInternal('Layer 1', 0)
+    this.addLayerInternal(this.naming.layer(1), 0)
     this.activeId = this.layers[0].id
     this.markAllDirty()
     this.refreshState()
@@ -326,6 +352,17 @@ export class Engine {
     if (opts.withPaper) {
       target.fillStyle = this.paper.color
       target.fillRect(0, 0, w, h)
+      // The paper's texture is part of what you see, so it counts too.
+      if (this.paper.texture) {
+        const pat = target.createPattern(getPaperSurfaceTile(), 'repeat')
+        if (pat) {
+          pat.setTransform(new DOMMatrix().scale(w / this.width, h / this.height))
+          target.globalCompositeOperation = 'multiply'
+          target.fillStyle = pat
+          target.fillRect(0, 0, w, h)
+          target.globalCompositeOperation = 'source-over'
+        }
+      }
     }
     const s = this.stroke
     for (const layer of this.layers) {
@@ -383,8 +420,21 @@ export class Engine {
   private nextLayerName() {
     let n = this.layers.length + 1
     const names = new Set(this.layers.map((l) => l.name))
-    while (names.has(`Layer ${n}`)) n++
-    return `Layer ${n}`
+    while (names.has(this.naming.layer(n))) n++
+    return this.naming.layer(n)
+  }
+
+  /** Rename layers in place (no undo step) – used to follow a language change. */
+  renameLayers(rename: (name: string) => string | null) {
+    let changed = false
+    for (const l of this.layers) {
+      const next = rename(l.name)
+      if (next && next !== l.name) {
+        l.name = next
+        changed = true
+      }
+    }
+    if (changed) this.emit()
   }
 
   /** A stroke or move is in progress; document-level edits must wait. */
@@ -398,12 +448,12 @@ export class Engine {
     const layer = this.addLayerInternal(name ?? this.nextLayerName(), index)
     const prevActive = this.activeId
     this.activeId = layer.id
-    this.pushStructural('New layer', layer, index, prevActive)
+    this.pushStructural('newLayer', layer, index, prevActive)
     this.afterLayerChange()
     return layer.id
   }
 
-  private pushStructural(label: string, layer: Layer, index: number, prevActive: string) {
+  private pushStructural(label: HistoryLabel, layer: Layer, index: number, prevActive: string) {
     this.history.push({
       label,
       bytes: 1024,
@@ -422,7 +472,7 @@ export class Engine {
     const src = this.findLayer(id)
     if (!src || this.busy || this.layers.length >= MAX_LAYERS) return
     const index = this.layers.indexOf(src) + 1
-    const copy = this.makeLayer(`${src.name} copy`)
+    const copy = this.makeLayer(this.naming.copy(src.name))
     copy.opacity = src.opacity
     copy.blend = src.blend
     copy.visible = src.visible
@@ -431,8 +481,8 @@ export class Engine {
     this.addLayerInternal(copy.name, index, copy)
     const prevActive = this.activeId
     this.activeId = copy.id
-    const entry: HistoryEntry = {
-      label: 'Duplicate layer',
+    const entry: HistoryEntry<HistoryLabel> = {
+      label: 'duplicateLayer',
       bytes: this.width * this.height * 4,
       undo: () => {
         this.layers.splice(this.layers.indexOf(copy), 1)
@@ -460,7 +510,7 @@ export class Engine {
     if (wasActive) this.activeId = this.layers[Math.max(0, index - 1)].id
     const prevActive = id
     this.history.push({
-      label: 'Delete layer',
+      label: 'deleteLayer',
       bytes: this.width * this.height * 4,
       undo: () => {
         this.layers.splice(index, 0, layer)
@@ -486,7 +536,7 @@ export class Engine {
     }
     move(from, to)
     this.history.push({
-      label: 'Reorder layers',
+      label: 'reorderLayers',
       bytes: 64,
       undo: () => move(to, from),
       redo: () => move(from, to),
@@ -513,7 +563,7 @@ export class Engine {
     this.activeId = lower.id
     lower.version++
     this.history.push({
-      label: 'Merge down',
+      label: 'mergeDown',
       bytes: before.data.length * 2,
       undo: () => {
         lower.ctx.putImageData(before, 0, 0)
@@ -538,7 +588,7 @@ export class Engine {
     this.snapCtx.drawImage(layer.canvas, 0, 0)
     this.snapCtx.globalCompositeOperation = 'source-over'
     layer.ctx.clearRect(0, 0, this.width, this.height)
-    this.pushPixels(layer, { x0: 0, y0: 0, x1: this.width, y1: this.height }, 'Clear layer')
+    this.pushPixels(layer, { x0: 0, y0: 0, x1: this.width, y1: this.height }, 'clearLayer')
     this.afterLayerChange()
   }
 
@@ -609,7 +659,7 @@ export class Engine {
 
   // --------------------------------------------------------------- history
 
-  private pushPixels(layer: Layer, b: Rect, label: string) {
+  private pushPixels(layer: Layer, b: Rect, label: HistoryLabel) {
     const x = Math.max(0, Math.floor(b.x0))
     const y = Math.max(0, Math.floor(b.y0))
     const w = Math.min(this.width, Math.ceil(b.x1)) - x
@@ -647,10 +697,10 @@ export class Engine {
   // --------------------------------------------------------------- strokes
 
   /** Why painting on the active layer is not possible right now, if anything. */
-  blockedReason(): string | null {
+  blockedReason(): BlockedReason | null {
     const l = this.active
-    if (!l.visible) return `“${l.name}” is hidden — show it to paint`
-    if (l.locked) return `“${l.name}” is locked`
+    if (!l.visible) return { reason: 'hidden', layer: l.name }
+    if (l.locked) return { reason: 'locked', layer: l.name }
     return null
   }
 
@@ -714,7 +764,7 @@ export class Engine {
       bounds: null,
       lastDab: null,
       lastTick: performance.now(),
-      label: brush.name,
+      label: `brush:${brushId}`,
       started: false,
       states: [],
       maps: this.symmetryMaps(),
@@ -923,7 +973,7 @@ export class Engine {
     layer.ctx.restore()
     if (layer.alphaLock) this.restoreAlpha(layer, res)
     const rect = { x0: res.x0, y0: res.y0, x1: res.x1, y1: res.y1 }
-    this.pushPixels(layer, rect, 'Fill')
+    this.pushPixels(layer, rect, 'fill')
     this.markDirty(rect.x0, rect.y0, rect.x1, rect.y1)
     this.emit()
     this.contentChanged()
@@ -989,7 +1039,7 @@ export class Engine {
       m.layer.ctx.globalCompositeOperation = 'copy'
       m.layer.ctx.drawImage(this.snapshot, dx, dy)
       m.layer.ctx.restore()
-      this.pushPixels(m.layer, { x0: 0, y0: 0, x1: this.width, y1: this.height }, 'Move layer')
+      this.pushPixels(m.layer, { x0: 0, y0: 0, x1: this.width, y1: this.height }, 'moveLayer')
     }
     this.afterLayerChange()
   }
@@ -1067,7 +1117,7 @@ export class Engine {
         layers.push(layer)
       })
     } else {
-      layers.push(this.makeLayer('Layer 1'))
+      layers.push(this.makeLayer(this.naming.layer(1)))
     }
     this.layers = layers
     const activeIndex = 'activeIndex' in doc ? doc.activeIndex : 0

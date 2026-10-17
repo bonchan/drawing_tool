@@ -227,6 +227,47 @@ kbd {
   color: var(--text);
 }
 
+.lang-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  cursor: pointer;
+  flex: none;
+}
+.lang-select:hover,
+.lang-select:focus-within {
+  background: var(--hover);
+  color: var(--text);
+}
+.lang-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  padding: 0 4px 0 0;
+  cursor: pointer;
+}
+.lang-select select:focus-visible {
+  outline: none;
+}
+.lang-code {
+  display: none;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.lang-select option {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
 .icon-btn {
   display: inline-grid;
   place-items: center;
@@ -878,7 +919,7 @@ kbd {
 }
 .comp-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 54px 48px;
+  grid-template-columns: 22px minmax(0, 1fr) 50px 54px;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -939,6 +980,7 @@ button.comp-row:hover,
   transition: width 0.45s ease;
 }
 .comp-pct {
+  white-space: nowrap;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -1550,6 +1592,20 @@ button.comp-row:hover,
   }
   .hide-sm {
     display: none !important;
+  }
+  /* compact language button: show the code, keep the native picker on top of it */
+  .lang-select {
+    position: relative;
+    padding: 0 6px;
+  }
+  .lang-select select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+  }
+  .lang-code {
+    display: inline;
   }
   .brand {
     padding: 0 2px;

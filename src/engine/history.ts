@@ -1,5 +1,5 @@
-export interface HistoryEntry {
-  label: string
+export interface HistoryEntry<L extends string = string> {
+  label: L
   /** Approximate memory held by this entry, used to cap total history size. */
   bytes: number
   undo(): void
@@ -9,12 +9,12 @@ export interface HistoryEntry {
 const MAX_ENTRIES = 80
 const MAX_BYTES = 320 * 1024 * 1024
 
-export class History {
-  private past: HistoryEntry[] = []
-  private future: HistoryEntry[] = []
+export class History<L extends string = string> {
+  private past: HistoryEntry<L>[] = []
+  private future: HistoryEntry<L>[] = []
   private bytes = 0
 
-  push(entry: HistoryEntry) {
+  push(entry: HistoryEntry<L>) {
     this.past.push(entry)
     this.bytes += entry.bytes
     for (const f of this.future) this.bytes -= f.bytes
@@ -25,7 +25,7 @@ export class History {
     }
   }
 
-  undo(): HistoryEntry | null {
+  undo(): HistoryEntry<L> | null {
     const e = this.past.pop()
     if (!e) return null
     e.undo()
@@ -33,7 +33,7 @@ export class History {
     return e
   }
 
-  redo(): HistoryEntry | null {
+  redo(): HistoryEntry<L> | null {
     const e = this.future.pop()
     if (!e) return null
     e.redo()

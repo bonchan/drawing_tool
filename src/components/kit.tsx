@@ -1,6 +1,7 @@
 import { ChevronDown } from 'lucide-react'
 import { useId, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from '../state/store'
+import { useI18n } from '../i18n'
 import { formatValue } from '../lib/format'
 import { ui, uiStore } from '../state/ui'
 
@@ -94,6 +95,7 @@ export function Slider({
   onChange: (v: number) => void
 }) {
   const id = useId()
+  const i18n = useI18n()
   const toPos = (v: number) => {
     const t = (v - min) / (max - min)
     return curve === 'quad' ? Math.sqrt(Math.max(0, t)) : t
@@ -110,7 +112,7 @@ export function Slider({
     <div className="slider" title={hint}>
       <div className="slider-top">
         <label htmlFor={id}>{label}</label>
-        <span className="slider-value">{formatValue(value, unit)}</span>
+        <span className="slider-value">{formatValue(i18n, value, unit)}</span>
       </div>
       <input
         id={id}

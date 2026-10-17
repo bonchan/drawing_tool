@@ -1,6 +1,7 @@
 import { ArrowLeftRight, Palette } from 'lucide-react'
 import { useState, type PointerEvent as RPointerEvent } from 'react'
 import { hexToRgb, hsvToRgb, isValidHex, rgbToHex, rgbToHsv, type HSV } from '../engine/color'
+import { useI18n } from '../i18n'
 import { useStore } from '../state/store'
 import { toolStore, tools } from '../state/tools'
 import { IconButton, Section } from './kit'
@@ -33,6 +34,7 @@ function useDrag(onMove: (x: number, y: number) => void) {
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 
 export function ColorPanel() {
+  const { t } = useI18n()
   const color = useStore(toolStore, (s) => s.color)
   const secondary = useStore(toolStore, (s) => s.secondary)
   const recent = useStore(toolStore, (s) => s.recent)
@@ -63,29 +65,29 @@ export function ColorPanel() {
   const hueColor = rgbToHex(hsvToRgb({ h: hsv.h, s: 1, v: 1 }))
 
   return (
-    <Section id="color" title="Colour" icon={<Palette size={14} />}>
+    <Section id="color" title={t('color.title')} icon={<Palette size={14} />}>
       <div className="color-panel">
-        <div className="sv-box" style={{ background: hueColor }} {...sv} role="slider" aria-label="Saturation and brightness" aria-valuetext={color}>
+        <div className="sv-box" style={{ background: hueColor }} {...sv} role="slider" aria-label={t('color.saturationBrightness')} aria-valuetext={color}>
           <div className="sv-white" />
           <div className="sv-black" />
           <div className="sv-handle" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: color }} />
         </div>
-        <div className="hue-bar" {...hue} role="slider" aria-label="Hue" aria-valuenow={Math.round(hsv.h)} aria-valuemin={0} aria-valuemax={360}>
+        <div className="hue-bar" {...hue} role="slider" aria-label={t('color.hue')} aria-valuenow={Math.round(hsv.h)} aria-valuemin={0} aria-valuemax={360}>
           <div className="hue-handle" style={{ left: `${(hsv.h / 360) * 100}%`, background: hueColor }} />
         </div>
         <div className="color-row">
           <div className="color-chips">
-            <button type="button" className="chip chip-secondary" style={{ background: secondary }} onClick={() => tools.swapColors()} aria-label="Secondary colour (click to swap)" data-tip="Secondary  ·  X to swap" />
-            <span className="chip chip-primary" style={{ background: color }} aria-label="Current colour" />
+            <button type="button" className="chip chip-secondary" style={{ background: secondary }} onClick={() => tools.swapColors()} aria-label={t('color.secondary')} data-tip={t('color.secondaryTip')} />
+            <span className="chip chip-primary" style={{ background: color }} aria-label={t('color.current')} />
           </div>
-          <IconButton label="Swap colours" shortcut="X" onClick={() => tools.swapColors()}>
+          <IconButton label={t('color.swap')} shortcut="X" onClick={() => tools.swapColors()}>
             <ArrowLeftRight size={14} />
           </IconButton>
           <input
             className="hex-input"
             value={hexDraft}
             spellCheck={false}
-            aria-label="Hex colour"
+            aria-label={t('color.hex')}
             onChange={(e) => {
               setHexDraft(e.target.value)
               const v = e.target.value.trim()
@@ -112,7 +114,7 @@ export function ColorPanel() {
         </div>
         {recent.length > 0 && (
           <>
-            <div className="mini-label">Recently used</div>
+            <div className="mini-label">{t('color.recent')}</div>
             <div className="swatch-row">
               {recent.slice(0, 12).map((c) => (
                 <button

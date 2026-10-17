@@ -31,10 +31,13 @@ A panel that always shows **what percentage of the painting each colour takes up
 
 - A donut chart plus a ranked list of colour groups with names (pigment-style names such as *Ultramarine*, *Burnt Sienna*, *Sap Green*), hex codes and percentages. Click any colour to paint with it again.
 - **Families** (reds, blues, browns, neutrals…), **Values** (a lightness histogram with shadows / midtones / highlights) and a **warm / cool / neutral** temperature split.
-- Options: analyse all visible layers or just the active one, count bare paper or not, and a *Detail* slider that merges similar tints or separates subtle shades.
+- Options: analyse all visible layers or just the active one, count the bare paper (on by default – its texture included, since it's part of what you see), and a *Detail* slider that merges similar tints or separates subtle shades. These settings, and the chosen tab, are remembered between visits.
 - A thin palette strip in the status bar keeps the composition visible at all times.
 
 How it works: the visible image is sampled on a grid using nearest-neighbour sampling, so the pixel colours are real and unblended. Colours are bucketed into a 15-bit histogram and grouped in the perceptual **OKLab** space (greedy seeding, then k-means refinement), all in a Web Worker. Matching then keeps each group's identity stable from one update to the next, so the chart animates instead of flickering.
+
+### Languages
+The whole interface is available in **English** and **Spanish** (*español*): every label, tooltip, brush description, colour name and number format (`12.5%` vs `12,5 %`). The language is detected from the browser, can be changed with the selector in the top bar, and is remembered. Auto-generated layer names follow the language ("Layer 2 copy" ↔ "Capa 2 copia"); names you typed yourself are never touched.
 
 ### Everything else
 Undo/redo (80 steps, memory-capped; two-finger tap to undo on touch screens), pan/zoom (scroll, pinch, space-drag), straight lines with Shift-click, Alt/right-click colour picking, palm rejection (fingers pan once a stylus is used), autosave to IndexedDB, save/open `.atelier` project files, import images as layers (or drag and drop them), PNG export, keyboard shortcuts (press `?` in the app).
@@ -48,6 +51,19 @@ pnpm test       # unit tests (vitest)
 pnpm lint
 pnpm build      # type-check + production build into dist/
 ```
+
+## Adding a language
+
+Translations live in `src/i18n/locales/`. English (`en.ts`) is the source catalog; every other locale is type-checked against it.
+
+1. Copy `src/i18n/locales/es.ts` to `src/i18n/locales/<code>.ts` (e.g. `fr.ts`) and translate the strings. Keep the `{placeholders}` as they are.
+2. Register it in `src/i18n/index.ts`:
+   ```ts
+   { code: 'fr', name: 'Français', load: () => import('./locales/fr') },
+   ```
+3. Run `pnpm typecheck` and `pnpm test`. TypeScript reports any missing or misspelled key, and the tests check that every locale has the same keys and placeholders as English.
+
+Each locale is loaded on demand as its own small chunk. Plurals use CLDR categories (`plural({ one, few, many, other })`), so languages with richer plural rules work too. At runtime a missing string falls back to English, but the tests expect every catalog to be complete.
 
 ## Deployment
 
@@ -65,6 +81,7 @@ src/
     brushPreview.ts  renders brush previews with the real engine
     persistence.ts   IndexedDB autosave + project files
   analysis/          colour composition (clustering, naming, worker)
+  i18n/              translations: typed catalogs, plurals, number formats
   components/        React UI
   state/             small external stores (tools, view, UI)
 ```

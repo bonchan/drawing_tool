@@ -5,9 +5,7 @@ import { COMMON, type BrushDef } from './types'
 
 export const eraser: BrushDef<null> = {
   id: 'eraser',
-  name: 'Eraser',
-  group: 'Utility',
-  description: 'Removes paint from the active layer. Lower hardness for a soft kneaded-eraser feel.',
+  group: 'utility',
   shortcut: 'E',
   target: 'buffer',
   composite: 'destination-out',
@@ -33,9 +31,7 @@ interface SmudgeState {
 
 export const smudge: BrushDef<SmudgeState> = {
   id: 'smudge',
-  name: 'Blender',
-  group: 'Utility',
-  description: 'Smudges and blends paint like a finger or a soft blending stump.',
+  group: 'utility',
   shortcut: 'U',
   target: 'layer',
   composite: 'source-over',
@@ -43,7 +39,7 @@ export const smudge: BrushDef<SmudgeState> = {
   defaults: { size: 40, opacity: 1, flow: 1, smoothing: 0.25, hardness: 0.3, strength: 0.7 },
   controls: [
     COMMON.size,
-    { key: 'strength', label: 'Strength', min: 0.05, max: 0.98, step: 0.01, unit: '%', hint: 'How far paint is dragged' },
+    { key: 'strength', label: 'strength', min: 0.05, max: 0.98, step: 0.01, unit: '%', hint: 'strength' },
     COMMON.hardness,
     COMMON.smoothing,
   ],

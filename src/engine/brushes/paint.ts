@@ -5,9 +5,7 @@ import { COMMON, type BrushDef } from './types'
 
 export const brush: BrushDef<null> = {
   id: 'brush',
-  name: 'Round Brush',
-  group: 'Paint',
-  description: 'Soft round brush with pressure-controlled size and flow. The everyday workhorse.',
+  group: 'paint',
   shortcut: 'B',
   target: 'buffer',
   composite: 'source-over',
@@ -51,9 +49,7 @@ interface OilState {
 
 export const oil: BrushDef<OilState> = {
   id: 'oil',
-  name: 'Oil Paint',
-  group: 'Paint',
-  description: 'Loaded bristle brush: thick streaky paint that runs dry, and picks up and blends the colours already on the canvas.',
+  group: 'paint',
   shortcut: 'O',
   target: 'buffer',
   composite: 'source-over',
@@ -62,9 +58,9 @@ export const oil: BrushDef<OilState> = {
   controls: [
     COMMON.size,
     COMMON.opacity,
-    { ...COMMON.flow, label: 'Paint' },
-    { key: 'mix', label: 'Blending', min: 0, max: 1, step: 0.01, unit: '%', hint: 'Picks up colour from the canvas' },
-    { key: 'load', label: 'Load', min: 0, max: 1, step: 0.01, unit: '%', hint: 'How long until the brush runs dry' },
+    { ...COMMON.flow, label: 'paint' },
+    { key: 'mix', label: 'blending', min: 0, max: 1, step: 0.01, unit: '%', hint: 'blending' },
+    { key: 'load', label: 'load', min: 0, max: 1, step: 0.01, unit: '%', hint: 'load' },
     COMMON.smoothing,
   ],
   spacing: (s) => Math.max(0.8, s.size * 0.06),
@@ -190,9 +186,7 @@ interface SprayState {
 
 export const airbrush: BrushDef<SprayState> = {
   id: 'airbrush',
-  name: 'Airbrush',
-  group: 'Paint',
-  description: 'Ultra-soft spray that keeps building up while you hold it in place.',
+  group: 'paint',
   shortcut: 'A',
   target: 'buffer',
   composite: 'source-over',
@@ -213,9 +207,7 @@ export const airbrush: BrushDef<SprayState> = {
 
 export const spray: BrushDef<SprayState> = {
   id: 'spray',
-  name: 'Spray Can',
-  group: 'Paint',
-  description: 'Graffiti-style spray paint made of thousands of tiny droplets.',
+  group: 'paint',
   shortcut: 'J',
   target: 'buffer',
   composite: 'source-over',
@@ -225,8 +217,8 @@ export const spray: BrushDef<SprayState> = {
   controls: [
     COMMON.size,
     COMMON.opacity,
-    { ...COMMON.flow, label: 'Density' },
-    { key: 'droplet', label: 'Droplet size', min: 0, max: 1, step: 0.01, unit: '%' },
+    { ...COMMON.flow, label: 'density' },
+    { key: 'droplet', label: 'dropletSize', min: 0, max: 1, step: 0.01, unit: '%' },
     COMMON.smoothing,
   ],
   spacing: (s) => Math.max(1, s.size * 0.1),

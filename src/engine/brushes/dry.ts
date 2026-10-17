@@ -5,25 +5,23 @@ import { COMMON, type BrushDef } from './types'
 
 const texture = {
   key: 'texture',
-  label: 'Grain',
+  label: 'grain',
   min: 0,
   max: 1,
   step: 0.01,
   unit: '%',
-  hint: 'How much the paper tooth shows through',
+  hint: 'grain',
 } as const
 
 export const pencil: BrushDef<null> = {
   id: 'pencil',
-  name: 'Pencil',
-  group: 'Dry media',
-  description: 'Graphite that catches the paper grain. Press harder for darker lines, tilt a stylus to shade.',
+  group: 'dry',
   shortcut: 'P',
   target: 'buffer',
   composite: 'source-over',
   pressureMode: 'pen-or-full',
   defaults: { size: 4, opacity: 0.92, flow: 0.55, smoothing: 0.2, hardness: 0.5, texture: 0.55 },
-  controls: [COMMON.size, COMMON.opacity, { ...COMMON.flow, label: 'Density' }, texture, COMMON.smoothing],
+  controls: [COMMON.size, COMMON.opacity, { ...COMMON.flow, label: 'density' }, texture, COMMON.smoothing],
   spacing: (s) => Math.max(0.5, s.size * 0.16),
   begin: () => null,
   dab(ctx, d) {
@@ -47,9 +45,7 @@ export const pencil: BrushDef<null> = {
 
 export const charcoal: BrushDef<null> = {
   id: 'charcoal',
-  name: 'Charcoal',
-  group: 'Dry media',
-  description: 'Soft, dusty vine charcoal with ragged edges and scattered particles.',
+  group: 'dry',
   shortcut: 'C',
   target: 'buffer',
   composite: 'source-over',
@@ -58,9 +54,9 @@ export const charcoal: BrushDef<null> = {
   controls: [
     COMMON.size,
     COMMON.opacity,
-    { ...COMMON.flow, label: 'Density' },
+    { ...COMMON.flow, label: 'density' },
     texture,
-    { key: 'scatter', label: 'Dust', min: 0, max: 1, step: 0.01, unit: '%' },
+    { key: 'scatter', label: 'dust', min: 0, max: 1, step: 0.01, unit: '%' },
     COMMON.smoothing,
   ],
   spacing: (s) => Math.max(0.6, s.size * 0.14),
@@ -105,15 +101,13 @@ export const charcoal: BrushDef<null> = {
 
 export const crayon: BrushDef<null> = {
   id: 'crayon',
-  name: 'Crayon',
-  group: 'Dry media',
-  description: 'Waxy oil pastel: rich colour that skips over the paper grain.',
+  group: 'dry',
   shortcut: 'Y',
   target: 'buffer',
   composite: 'source-over',
   pressureMode: 'pen-or-full',
   defaults: { size: 14, opacity: 1, flow: 0.85, smoothing: 0.2, hardness: 0.8, texture: 0.5 },
-  controls: [COMMON.size, COMMON.opacity, { ...COMMON.flow, label: 'Wax' }, texture, COMMON.smoothing],
+  controls: [COMMON.size, COMMON.opacity, { ...COMMON.flow, label: 'wax' }, texture, COMMON.smoothing],
   spacing: (s) => Math.max(0.6, s.size * 0.12),
   begin: () => null,
   dab(ctx, d) {

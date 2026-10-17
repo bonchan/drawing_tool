@@ -32,9 +32,7 @@ const newCapsule = (): CapsuleState => ({ px: 0, py: 0, pr: 0, has: false })
 
 export const pen: BrushDef<CapsuleState> = {
   id: 'pen',
-  name: 'Fineliner',
-  group: 'Ink & pens',
-  description: 'Crisp, even technical-pen line. Great for line art and hatching.',
+  group: 'ink',
   shortcut: 'N',
   target: 'buffer',
   composite: 'source-over',
@@ -62,9 +60,7 @@ function inkRadius(ctx: PaintContext, d: Dab) {
 
 export const ink: BrushDef<InkState> = {
   id: 'ink',
-  name: 'Ink Brush',
-  group: 'Ink & pens',
-  description: 'Expressive sumi brush. Width follows pressure (or speed with a mouse) and tapers off when you flick.',
+  group: 'ink',
   shortcut: 'K',
   target: 'buffer',
   composite: 'source-over',
@@ -73,7 +69,7 @@ export const ink: BrushDef<InkState> = {
   controls: [
     COMMON.size,
     COMMON.opacity,
-    { key: 'taper', label: 'Taper', min: 0, max: 1, step: 0.01, unit: '%', hint: 'Pointed stroke ends' },
+    { key: 'taper', label: 'taper', min: 0, max: 1, step: 0.01, unit: '%', hint: 'taper' },
     COMMON.smoothing,
   ],
   spacing: (s) => Math.max(0.6, s.size * 0.12),
@@ -165,9 +161,7 @@ const newNib = (): NibState => ({ ax: 0, ay: 0, bx: 0, by: 0, has: false })
 
 export const calligraphy: BrushDef<NibState> = {
   id: 'calligraphy',
-  name: 'Calligraphy',
-  group: 'Ink & pens',
-  description: 'Flat italic nib: thick and thin strokes depend on the direction you move.',
+  group: 'ink',
   shortcut: 'Q',
   target: 'buffer',
   composite: 'source-over',
@@ -176,7 +170,7 @@ export const calligraphy: BrushDef<NibState> = {
   controls: [
     COMMON.size,
     COMMON.opacity,
-    { key: 'angle', label: 'Nib angle', min: 0, max: 180, step: 1, unit: '°' },
+    { key: 'angle', label: 'nibAngle', min: 0, max: 180, step: 1, unit: '°' },
     COMMON.smoothing,
   ],
   spacing: (s) => Math.max(0.6, s.size * 0.08),
@@ -189,9 +183,7 @@ export const calligraphy: BrushDef<NibState> = {
 
 export const marker: BrushDef<CapsuleState> = {
   id: 'marker',
-  name: 'Marker',
-  group: 'Ink & pens',
-  description: 'Alcohol marker. Flat and even inside a stroke; overlapping strokes build up darker.',
+  group: 'ink',
   shortcut: 'M',
   target: 'buffer',
   composite: 'multiply',
@@ -207,9 +199,7 @@ export const marker: BrushDef<CapsuleState> = {
 
 export const highlighter: BrushDef<NibState> = {
   id: 'highlighter',
-  name: 'Highlighter',
-  group: 'Ink & pens',
-  description: 'Chisel-tip highlighter that multiplies over whatever is underneath.',
+  group: 'ink',
   shortcut: 'L',
   target: 'buffer',
   composite: 'multiply',

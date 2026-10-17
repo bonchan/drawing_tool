@@ -47,6 +47,8 @@ export const view = {
   },
 }
 
+export type CompositionTab = 'colors' | 'families' | 'values'
+
 export interface UiState {
   leftOpen: boolean
   rightOpen: boolean
@@ -54,18 +56,47 @@ export interface UiState {
   toast: { id: number; text: string; tone: 'info' | 'warn' } | null
   /** Collapsed panel sections by key. */
   collapsed: Record<string, boolean>
+  compositionTab: CompositionTab
   saving: 'idle' | 'saving' | 'saved' | 'error'
 }
 
 const narrow = typeof window !== 'undefined' && window.innerWidth < 900
+const PREFS_KEY = 'atelier.ui.v1'
+
+/** Layout preferences that survive reloads (open panels depend on the screen, so they don't). */
+function loadPrefs(): Pick<UiState, 'collapsed' | 'compositionTab'> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Partial<UiState>
+    const tab = saved.compositionTab
+    return {
+      collapsed: saved.collapsed && typeof saved.collapsed === 'object' ? saved.collapsed : {},
+      compositionTab: tab === 'families' || tab === 'values' ? tab : 'colors',
+    }
+  } catch {
+    return { collapsed: {}, compositionTab: 'colors' }
+  }
+}
 
 export const uiStore = createStore<UiState>({
   leftOpen: !narrow,
   rightOpen: !narrow,
   dialog: null,
   toast: null,
-  collapsed: {},
+  ...loadPrefs(),
   saving: 'idle',
+})
+
+let savedPrefs = ''
+uiStore.subscribe(() => {
+  const { collapsed, compositionTab } = uiStore.get()
+  const next = JSON.stringify({ collapsed, compositionTab })
+  if (next === savedPrefs) return
+  savedPrefs = next
+  try {
+    localStorage.setItem(PREFS_KEY, next)
+  } catch {
+    /* storage unavailable */
+  }
 })
 
 let toastId = 0

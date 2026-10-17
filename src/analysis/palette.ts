@@ -1,5 +1,5 @@
 import { labDistance, labToLch, oklabToRgb, rgbToHex, rgbToOklab, type Lab, type RGB } from '../engine/color'
-import { nameColor } from './colorNames'
+import { nameColor, type ColorNameId } from './colorNames'
 
 export interface PaletteRequest {
   /** RGBA of the flattened image over the paper colour. */
@@ -10,33 +10,39 @@ export interface PaletteRequest {
   /** OKLab distance under which colours are considered the same (≈0.02–0.2). */
   mergeDistance: number
   maxColors: number
+  /** Flat paper colour – used only when no bare paper is visible to measure. */
   paper: RGB
 }
+
+/** Qualifier for two groups that share a colour name: light/mid/dark, or a number. */
+export type Shade = 'light' | 'mid' | 'dark' | number
 
 export interface ColorSwatch {
   hex: string
   rgb: RGB
   lab: Lab
-  name: string
+  /** Colour name id; display text comes from the i18n catalogs. */
+  nameId: ColorNameId
+  shade?: Shade
   /** 0..1 share of the analysed area. */
   share: number
   isPaper: boolean
 }
 
-export type FamilyName =
-  | 'Reds'
-  | 'Oranges'
-  | 'Yellows'
-  | 'Greens'
-  | 'Cyans'
-  | 'Blues'
-  | 'Purples'
-  | 'Pinks'
-  | 'Browns'
-  | 'Neutrals'
+export type FamilyId =
+  | 'reds'
+  | 'oranges'
+  | 'yellows'
+  | 'greens'
+  | 'cyans'
+  | 'blues'
+  | 'purples'
+  | 'pinks'
+  | 'browns'
+  | 'neutrals'
 
 export interface FamilyShare {
-  name: FamilyName
+  id: FamilyId
   share: number
   hex: string
 }
@@ -82,15 +88,24 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   const n = color.length / 4
   let samples = 0
   let painted = 0
+  // The bare paper as it actually looks (its texture included), measured from unpainted samples.
+  let pr = 0
+  let pg = 0
+  let pb = 0
   for (let i = 0; i < n; i++) {
     const o = i * 4
-    // Ignore whisper-thin haze (airbrush falloff, charcoal dust): it reads as paper.
-    const isPainted = coverage[o + 3] > PAINT_ALPHA
-    if (isPainted) painted++
-    if (!req.includePaper && !isPainted) continue
     const r = color[o]
     const g = color[o + 1]
     const b = color[o + 2]
+    // Ignore whisper-thin haze (airbrush falloff, charcoal dust): it reads as paper.
+    const isPainted = coverage[o + 3] > PAINT_ALPHA
+    if (isPainted) painted++
+    else {
+      pr += r
+      pg += g
+      pb += b
+    }
+    if (!req.includePaper && !isPainted) continue
     const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)
     counts[key]++
     sr[key] += r
@@ -112,7 +127,9 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   if (samples === 0) return result
 
   // Collect occupied bins (dropping paper-coloured ones unless paper is counted).
-  const paperLab = rgbToOklab(req.paper)
+  const bare = n - painted
+  const paperRgb: RGB = bare > 0 ? [pr / bare, pg / bare, pb / bare] : req.paper
+  const paperLab = rgbToOklab(paperRgb)
   const binKeys: number[] = []
   for (let k = 0; k < BINS; k++) {
     const c = counts[k]
@@ -244,7 +261,7 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   clusters.sort((x, y) => y.w - x.w)
   result.distinct = clusters.filter((c) => c.w / samples >= 0.001).length
 
-  const familyAcc = new Map<FamilyName, { w: number; l: number; a: number; b: number }>()
+  const familyAcc = new Map<FamilyId, { w: number; l: number; a: number; b: number }>()
   for (const cl of clusters) {
     const share = cl.w / samples
     const lab: Lab = [cl.l, cl.a, cl.b]
@@ -266,12 +283,13 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
     // Show the most common actual colour in the group – that is the colour you painted.
     const rgb = cl.rep >= 0 ? binRgb[cl.rep] : oklabToRgb([cl.l, cl.a, cl.b])
     const lab = rgbToOklab(rgb)
-    const isPaper = req.includePaper && labDistance(lab, paperLab) < Math.max(0.02, T * 0.6)
+    // textured paper varies a little in lightness, hence the lightness-forgiving distance
+    const isPaper = req.includePaper && paletteDistance(lab, { l: paperLab[0], a: paperLab[1], b: paperLab[2] }) < Math.max(0.03, T * 0.6)
     return {
       hex: rgbToHex(rgb),
       rgb: [Math.round(rgb[0]), Math.round(rgb[1]), Math.round(rgb[2])] as RGB,
       lab,
-      name: isPaper ? 'Paper' : nameColor(rgb, lab),
+      nameId: isPaper ? ('paper' as const) : nameColor(rgb, lab),
       share: cl.w / samples,
       isPaper,
     }
@@ -281,8 +299,8 @@ export function analyzePalette(req: PaletteRequest): PaletteResult {
   if (result.other < 1e-6) result.other = 0
 
   result.families = [...familyAcc.entries()]
-    .map(([name, f]) => ({
-      name,
+    .map(([id, f]) => ({
+      id,
       share: f.w / samples,
       hex: rgbToHex(oklabToRgb([f.l / f.w, f.a / f.w, f.b / f.w])),
     }))
@@ -325,32 +343,33 @@ const distTo = paletteDistance
 
 /** Two groups that map to the same colour name get light/dark qualifiers. */
 function disambiguateNames(swatches: ColorSwatch[]) {
-  const groups = new Map<string, ColorSwatch[]>()
+  const groups = new Map<ColorNameId, ColorSwatch[]>()
   for (const s of swatches) {
-    const g = groups.get(s.name)
+    const g = groups.get(s.nameId)
     if (g) g.push(s)
-    else groups.set(s.name, [s])
+    else groups.set(s.nameId, [s])
   }
-  for (const [name, g] of groups) {
+  for (const g of groups.values()) {
     if (g.length < 2) continue
     g.sort((a, b) => b.lab[0] - a.lab[0])
-    const tags = g.length === 2 ? ['light', 'dark'] : g.length === 3 ? ['light', 'mid', 'dark'] : g.map((_, i) => String(i + 1))
-    g.forEach((s, i) => (s.name = `${name} (${tags[i]})`))
+    const tags: Shade[] =
+      g.length === 2 ? ['light', 'dark'] : g.length === 3 ? ['light', 'mid', 'dark'] : g.map((_, i) => i + 1)
+    g.forEach((s, i) => (s.shade = tags[i]))
   }
 }
 
-export function familyOf(lab: Lab): FamilyName {
+export function familyOf(lab: Lab): FamilyId {
   const [L, C, h] = labToLch(lab)
-  if (C < NEUTRAL_CHROMA) return 'Neutrals'
+  if (C < NEUTRAL_CHROMA) return 'neutrals'
   // dark, muted reds/oranges/yellows read as browns; saturated ones keep their hue
-  if (h >= 25 && h < 95 && L < 0.62 && C < 0.13) return 'Browns'
-  if (h >= 345 || h < 15) return L > 0.72 ? 'Pinks' : 'Reds'
-  if (h < 45) return L > 0.8 && C < 0.12 ? 'Pinks' : 'Reds'
-  if (h < 75) return 'Oranges'
-  if (h < 115) return 'Yellows'
-  if (h < 170) return 'Greens'
-  if (h < 225) return 'Cyans'
-  if (h < 285) return 'Blues'
-  if (h < 320) return 'Purples'
-  return 'Pinks'
+  if (h >= 25 && h < 95 && L < 0.62 && C < 0.13) return 'browns'
+  if (h >= 345 || h < 15) return L > 0.72 ? 'pinks' : 'reds'
+  if (h < 45) return L > 0.8 && C < 0.12 ? 'pinks' : 'reds'
+  if (h < 75) return 'oranges'
+  if (h < 115) return 'yellows'
+  if (h < 170) return 'greens'
+  if (h < 225) return 'cyans'
+  if (h < 285) return 'blues'
+  if (h < 320) return 'purples'
+  return 'pinks'
 }

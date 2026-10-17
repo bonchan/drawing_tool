@@ -4,6 +4,7 @@ import { engine } from '../session'
 import { BLEND_MODES, MAX_LAYERS, type BlendMode, type LayerMeta } from '../engine/Engine'
 import { getCheckerTile } from '../engine/textures'
 import { useDoc } from '../hooks/useApp'
+import { useI18n } from '../i18n'
 import { ui } from '../state/ui'
 import { IconButton, Section, Slider, Toggle } from './kit'
 
@@ -52,6 +53,8 @@ function LayerRow({
   docH: number
   onDragIndex: (from: number, to: number) => void
 }) {
+  const i18n = useI18n()
+  const { t } = i18n
   const [editing, setEditing] = useState(false)
   const [over, setOver] = useState(false)
   return (
@@ -79,8 +82,8 @@ function LayerRow({
       <button
         type="button"
         className="layer-eye"
-        aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
-        data-tip={layer.visible ? 'Hide layer' : 'Show layer'}
+        aria-label={t(layer.visible ? 'layers.hideNamed' : 'layers.showNamed', { name: layer.name })}
+        data-tip={t(layer.visible ? 'layers.hide' : 'layers.show')}
         onClick={(e) => {
           e.stopPropagation()
           engine.setLayerProps(layer.id, { visible: !layer.visible })
@@ -106,21 +109,21 @@ function LayerRow({
             }}
           />
         ) : (
-          <span className="layer-name" onDoubleClick={() => setEditing(true)} title="Double-click to rename">
+          <span className="layer-name" onDoubleClick={() => setEditing(true)} title={t('layers.rename')}>
             {layer.name}
           </span>
         )}
         <span className="layer-meta">
-          {BLEND_MODES.find((b) => b.id === layer.blend)?.label}
-          {layer.opacity < 1 ? ` · ${Math.round(layer.opacity * 100)}%` : ''}
-          {layer.alphaLock ? ' · α locked' : ''}
+          {t(`blend.${layer.blend}`)}
+          {layer.opacity < 1 ? ` · ${i18n.percent(layer.opacity)}` : ''}
+          {layer.alphaLock ? ` · ${t('layers.alphaLocked')}` : ''}
         </span>
       </div>
       <button
         type="button"
         className={`layer-lock ${layer.locked ? 'is-on' : ''}`}
-        aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
-        data-tip={layer.locked ? 'Unlock layer' : 'Lock layer'}
+        aria-label={t(layer.locked ? 'layers.unlockNamed' : 'layers.lockNamed', { name: layer.name })}
+        data-tip={t(layer.locked ? 'layers.unlock' : 'layers.lock')}
         onClick={(e) => {
           e.stopPropagation()
           engine.setLayerProps(layer.id, { locked: !layer.locked })
@@ -133,31 +136,33 @@ function LayerRow({
 }
 
 function PaperRow() {
+  const { t } = useI18n()
   const paper = useDoc((s) => s.paper)
   return (
     <div className={`layer-row paper-row ${paper.visible ? '' : 'is-hidden'}`}>
       <button
         type="button"
         className="layer-eye"
-        aria-label={paper.visible ? 'Hide paper' : 'Show paper'}
-        data-tip={paper.visible ? 'Hide paper (transparent background)' : 'Show paper'}
+        aria-label={t(paper.visible ? 'layers.hidePaper' : 'layers.showPaper')}
+        data-tip={t(paper.visible ? 'layers.hidePaper' : 'layers.showPaper')}
         onClick={() => engine.setPaper({ visible: !paper.visible })}
       >
         {paper.visible ? <Eye size={15} /> : <EyeOff size={15} />}
       </button>
-      <label className="paper-swatch" style={{ background: paper.color }} data-tip="Paper colour">
-        <input type="color" value={paper.color} onChange={(e) => engine.setPaper({ color: e.target.value })} aria-label="Paper colour" />
+      <label className="paper-swatch" style={{ background: paper.color }} data-tip={t('layers.paperColor')}>
+        <input type="color" value={paper.color} onChange={(e) => engine.setPaper({ color: e.target.value })} aria-label={t('layers.paperColor')} />
       </label>
       <div className="layer-info">
-        <span className="layer-name">Paper</span>
-        <span className="layer-meta">Background</span>
+        <span className="layer-name">{t('layers.paper')}</span>
+        <span className="layer-meta">{t('layers.background')}</span>
       </div>
-      <Toggle label="Texture" checked={paper.texture} onChange={(texture) => engine.setPaper({ texture })} hint="Cold-press paper grain" />
+      <Toggle label={t('layers.texture')} checked={paper.texture} onChange={(texture) => engine.setPaper({ texture })} hint={t('layers.textureHint')} />
     </div>
   )
 }
 
 export function LayersPanel() {
+  const { t } = useI18n()
   const layers = useDoc((s) => s.layers)
   const activeId = useDoc((s) => s.activeId)
   const docW = useDoc((s) => s.width)
@@ -169,38 +174,38 @@ export function LayersPanel() {
   return (
     <Section
       id="layers"
-      title="Layers"
+      title={t('layers.title')}
       icon={<Layers size={14} />}
       className="layers"
       actions={
         <>
           <IconButton
-            label="New layer"
+            label={t('layers.add')}
             shortcut="Ctrl+Shift+N"
             disabled={layers.length >= MAX_LAYERS}
             onClick={() => {
-              if (!engine.addLayer()) ui.toast(`Maximum of ${MAX_LAYERS} layers`, 'warn')
+              if (!engine.addLayer()) ui.toast(t('layers.maxReached', { max: MAX_LAYERS }), 'warn')
             }}
           >
             <Plus size={15} />
           </IconButton>
-          <IconButton label="Duplicate layer" shortcut="Ctrl+J" onClick={() => engine.duplicateLayer(activeId)}>
+          <IconButton label={t('layers.duplicate')} shortcut="Ctrl+J" onClick={() => engine.duplicateLayer(activeId)}>
             <Copy size={14} />
           </IconButton>
           <IconButton
-            label="Merge down"
+            label={t('layers.mergeDown')}
             shortcut="Ctrl+E"
             disabled={activeIndex <= 0}
             onClick={() => {
-              if (layers[activeIndex - 1]?.locked) ui.toast(`“${layers[activeIndex - 1].name}” is locked`, 'warn')
+              if (layers[activeIndex - 1]?.locked) ui.toast(t('errors.locked', { name: layers[activeIndex - 1].name }), 'warn')
               else engine.mergeDown(activeId)
             }}
           >
             <ArrowDownToLine size={14} />
           </IconButton>
           <IconButton
-            label="Delete layer"
-            onClick={() => (active?.locked ? ui.toast(`“${active.name}” is locked`, 'warn') : engine.deleteLayer(activeId))}
+            label={t('layers.remove')}
+            onClick={() => (active?.locked ? ui.toast(t('errors.locked', { name: active.name }), 'warn') : engine.deleteLayer(activeId))}
           >
             <Trash size={14} />
           </IconButton>
@@ -212,31 +217,31 @@ export function LayersPanel() {
           <select
             className="blend-select"
             value={active.blend}
-            aria-label="Blend mode"
+            aria-label={t('layers.blendMode')}
             onChange={(e) => engine.setLayerProps(active.id, { blend: e.target.value as BlendMode })}
           >
             {BLEND_MODES.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.label}
+              <option key={b} value={b}>
+                {t(`blend.${b}`)}
               </option>
             ))}
           </select>
-          <Slider label="Opacity" value={active.opacity} min={0} max={1} unit="%" onChange={(opacity) => engine.setLayerProps(active.id, { opacity })} />
+          <Slider label={t('layers.opacity')} value={active.opacity} min={0} max={1} unit="%" onChange={(opacity) => engine.setLayerProps(active.id, { opacity })} />
           <div className="layer-props-row">
             <Toggle
-              label="Lock transparency"
+              label={t('layers.lockTransparency')}
               checked={active.alphaLock}
               onChange={(alphaLock) => engine.setLayerProps(active.id, { alphaLock })}
-              hint="Paint only where this layer already has pixels – perfect for colouring line art"
+              hint={t('layers.lockTransparencyHint')}
             />
             <button
               type="button"
               className="btn btn-small"
-              onClick={() => (active.locked ? ui.toast(`“${active.name}” is locked`, 'warn') : engine.clearLayer(active.id))}
-              data-tip="Clear layer  ·  Delete"
+              onClick={() => (active.locked ? ui.toast(t('errors.locked', { name: active.name }), 'warn') : engine.clearLayer(active.id))}
+              data-tip={t('layers.clearTip')}
             >
               <Eraser size={13} />
-              Clear
+              {t('layers.clear')}
             </button>
           </div>
         </div>

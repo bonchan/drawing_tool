@@ -30,9 +30,9 @@ export const BRUSH_LIST: AnyBrush[] = [
 
 export const BRUSHES = Object.fromEntries(BRUSH_LIST.map((b) => [b.id, b])) as Record<BrushId, AnyBrush>
 
-export const BRUSH_GROUPS: Array<{ name: AnyBrush['group']; brushes: AnyBrush[] }> = (
-  ['Dry media', 'Ink & pens', 'Paint'] as const
-).map((name) => ({ name, brushes: BRUSH_LIST.filter((b) => b.group === name) }))
+export const BRUSH_GROUPS: Array<{ id: AnyBrush['group']; brushes: AnyBrush[] }> = (
+  ['dry', 'ink', 'paint'] as const
+).map((id) => ({ id, brushes: BRUSH_LIST.filter((b) => b.group === id) }))
 
 export function isBrushId(id: string): id is BrushId {
   return id in BRUSHES

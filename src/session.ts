@@ -2,6 +2,9 @@ import { PaletteAnalyzer } from './analysis/analyzer'
 import { Engine } from './engine/Engine'
 import { loadAutosave, saveAutosave } from './engine/persistence'
 import { getEdgeNoise, getLowNoise, getPaperGrain } from './engine/textures'
+import { i18nReady, onLocaleChange, t } from './i18n'
+import en from './i18n/locales/en'
+import { translateName, type NamePatterns } from './lib/layerNames'
 import { toolStore } from './state/tools'
 import { uiStore, view, viewStore } from './state/ui'
 
@@ -13,6 +16,27 @@ engine.symmetry = toolStore.get().symmetry
 toolStore.subscribe(() => {
   engine.symmetry = toolStore.get().symmetry
 })
+
+// ------------------------------------------------------------- layer names
+
+/** New layers are named in the current language. */
+engine.naming = {
+  layer: (n) => t('layers.defaultName', { n }),
+  copy: (name) => t('layers.copyName', { name }),
+}
+
+const currentPatterns = (): NamePatterns => ({ layer: t('layers.defaultName'), copy: t('layers.copyName') })
+let namedWith: NamePatterns = { layer: en.layers.defaultName, copy: en.layers.copyName }
+
+function localizeLayerNames() {
+  const from = namedWith
+  const to = currentPatterns()
+  namedWith = to
+  if (from.layer === to.layer && from.copy === to.copy) return
+  engine.renameLayers((name) => translateName(name, from, to))
+}
+
+onLocaleChange(() => localizeLayerNames())
 
 // ------------------------------------------------------------------ autosave
 
@@ -75,6 +99,7 @@ export function restoreSession() {
 }
 
 async function restore() {
+  await i18nReady
   const doc = await loadAutosave()
   if (doc) {
     try {
@@ -83,6 +108,9 @@ async function restore() {
       /* corrupted autosave – start fresh */
     }
   }
+  // Default names were generated in English (fresh document) or saved in English.
+  namedWith = { layer: en.layers.defaultName, copy: en.layers.copyName }
+  localizeLayerNames()
   restoring = false
   view.fit(engine.width, engine.height)
   // Generate the procedural noise textures before the first watercolor/pencil stroke needs them.

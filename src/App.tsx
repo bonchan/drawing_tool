@@ -10,6 +10,7 @@ import { StatusBar } from './components/StatusBar'
 import { TooltipLayer } from './components/TooltipLayer'
 import { TopBar } from './components/TopBar'
 import { useAnalysis } from './hooks/useApp'
+import { t, useI18n } from './i18n'
 import { exportPng, openFile, saveProject } from './lib/actions'
 import { BRUSH_LIST } from './engine/brushes'
 import { MAX_LAYERS } from './engine/Engine'
@@ -42,7 +43,7 @@ function useShortcuts() {
         else if (k === 'e') engine.mergeDown(engine.getState().activeId)
         else if (k === 'j') engine.duplicateLayer(engine.getState().activeId)
         else if (k === 'n' && e.shiftKey) {
-          if (!engine.addLayer()) ui.toast(`Maximum of ${MAX_LAYERS} layers`, 'warn')
+          if (!engine.addLayer()) ui.toast(t('layers.maxReached', { max: MAX_LAYERS }), 'warn')
         } else if (k === '0') view.fit(engine.width, engine.height)
         else if (k === '1') view.actualSize(engine.width, engine.height)
         else if (k === '=' || k === '+') view.zoomBy(1.25)
@@ -62,7 +63,7 @@ function useShortcuts() {
       else if (k === 'delete' || k === 'backspace') {
         const st = engine.getState()
         const layer = st.layers.find((l) => l.id === st.activeId)
-        if (layer?.locked) ui.toast(`“${layer.name}” is locked`, 'warn')
+        if (layer?.locked) ui.toast(t('errors.locked', { name: layer.name }), 'warn')
         else engine.clearLayer(st.activeId)
       }
       else if (k === 'tab') {
@@ -120,19 +121,19 @@ function useFileDrop() {
 
 /** A gentle nudge on a blank canvas; disappears with the first stroke. */
 function EmptyHint() {
+  const { t } = useI18n()
   const empty = useAnalysis((s) => s.result !== null && s.result.coverage === 0 && s.options.scope === 'visible')
   if (!empty) return null
   return (
     <div className="empty-hint" aria-hidden>
-      <strong>Pick a brush and start painting</strong>
-      <span>
-        The colour composition updates with every stroke · press <kbd>?</kbd> for shortcuts
-      </span>
+      <strong>{t('app.emptyTitle')}</strong>
+      <span>{t('app.emptyBody')}</span>
     </div>
   )
 }
 
 export default function App() {
+  const { t } = useI18n()
   const leftOpen = useStore(uiStore, (s) => s.leftOpen)
   const rightOpen = useStore(uiStore, (s) => s.rightOpen)
   const [ready, setReady] = useState(false)
@@ -150,11 +151,11 @@ export default function App() {
         {leftOpen && <LeftPanel />}
         <main className="stage">
           <CanvasView />
-          {!ready && <div className="stage-loading">Restoring your painting…</div>}
+          {!ready && <div className="stage-loading">{t('app.restoring')}</div>}
           {ready && <EmptyHint />}
         </main>
         {rightOpen && (
-          <aside className="panel panel-right" aria-label="Colour, composition and layers">
+          <aside className="panel panel-right" aria-label={t('app.sidePanel')}>
             <div className="panel-scroll">
               <ColorPanel />
               <CompositionPanel />
@@ -169,7 +170,7 @@ export default function App() {
       <TooltipLayer />
       {dragging && (
         <div className="drop-overlay">
-          <div>Drop an image to add it as a layer, or an .atelier project to open it</div>
+          <div>{t('app.dropHint')}</div>
         </div>
       )}
     </div>

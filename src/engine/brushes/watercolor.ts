@@ -15,10 +15,7 @@ import { COMMON, type BrushDef, type Rect } from './types'
  */
 export const watercolor: BrushDef<null> = {
   id: 'watercolor',
-  name: 'Watercolor',
-  group: 'Paint',
-  description:
-    'Transparent washes that bleed, granulate and dry with darker edges. Layer strokes to glaze colours.',
+  group: 'paint',
   shortcut: 'W',
   target: 'buffer',
   composite: 'multiply',
@@ -28,16 +25,16 @@ export const watercolor: BrushDef<null> = {
   defaults: { size: 44, opacity: 0.5, flow: 1, smoothing: 0.3, hardness: 0.5, wetness: 0.5, granulation: 0.45 },
   controls: [
     COMMON.size,
-    { ...COMMON.opacity, label: 'Pigment' },
-    { key: 'wetness', label: 'Wetness', min: 0, max: 1, step: 0.01, unit: '%', hint: 'More water = more bleeding' },
+    { ...COMMON.opacity, label: 'pigment' },
+    { key: 'wetness', label: 'wetness', min: 0, max: 1, step: 0.01, unit: '%', hint: 'wetness' },
     {
       key: 'granulation',
-      label: 'Granulation',
+      label: 'granulation',
       min: 0,
       max: 1,
       step: 0.01,
       unit: '%',
-      hint: 'Pigment settling in the paper grain',
+      hint: 'granulation',
     },
     COMMON.smoothing,
   ],

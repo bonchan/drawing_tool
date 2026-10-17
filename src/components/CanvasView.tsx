@@ -6,7 +6,9 @@ import type { InputPoint } from '../engine/stroke'
 import { get2d, getCheckerTile } from '../engine/textures'
 import { toolStore, tools, type ToolId } from '../state/tools'
 import { cursorStore, ui, view, viewStore } from '../state/ui'
+import { i18n } from '../i18n'
 import { isTyping, releaseFocus } from '../lib/dom'
+import { blockedMessage } from '../lib/labels'
 
 type Mode = 'idle' | 'paint' | 'pan' | 'move' | 'pick' | 'gesture'
 
@@ -359,7 +361,7 @@ export function CanvasView() {
       }
       const reason = engine.blockedReason()
       if (reason && tool !== 'move') {
-        ui.toast(reason, 'warn')
+        ui.toast(blockedMessage(i18n(), reason), 'warn')
         return
       }
       if (tool === 'fill') {
@@ -370,7 +372,7 @@ export function CanvasView() {
       }
       if (tool === 'move') {
         if (!engine.beginMove()) {
-          if (reason) ui.toast(reason, 'warn')
+          if (reason) ui.toast(blockedMessage(i18n(), reason), 'warn')
           return
         }
         mode = 'move'

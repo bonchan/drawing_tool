@@ -44,7 +44,7 @@ describe('analyzePalette', () => {
 
   it('counts the paper when asked and labels it', () => {
     const r = analyzePalette(req(grid([['#fbf8f1', 750, false], ['#2f6fb3', 250, true]]), { includePaper: true }))
-    expect(r.swatches[0].name).toBe('Paper')
+    expect(r.swatches[0].nameId).toBe('paper')
     expect(r.swatches[0].isPaper).toBe(true)
     expect(r.swatches[0].share).toBeCloseTo(0.75, 5)
   })
@@ -92,7 +92,7 @@ describe('analyzePalette', () => {
 
   it('gives duplicate names light/dark qualifiers', () => {
     const r = analyzePalette(req(grid([['#2f6fb3', 100, true], ['#1d4f8a', 100, true]]), { mergeDistance: 0.02 }))
-    const names = r.swatches.map((s) => s.name)
+    const names = r.swatches.map((s) => `${s.nameId}|${s.shade ?? ''}`)
     expect(new Set(names).size).toBe(names.length)
   })
 
@@ -112,15 +112,15 @@ describe('analyzePalette', () => {
 describe('familyOf', () => {
   const fam = (hex: string) => familyOf(rgbToOklab(hexToRgb(hex)))
   it('classifies common colours', () => {
-    expect(fam('#d62828')).toBe('Reds')
-    expect(fam('#f77f00')).toBe('Oranges')
-    expect(fam('#fcbf49')).toBe('Yellows')
-    expect(fam('#2a9d3f')).toBe('Greens')
-    expect(fam('#1d4fd8')).toBe('Blues')
-    expect(fam('#7b2cbf')).toBe('Purples')
-    expect(fam('#808080')).toBe('Neutrals')
-    expect(fam('#6f4e37')).toBe('Browns')
-    expect(fam('#8a3324')).toBe('Browns')
-    expect(fam('#c23b3b')).toBe('Reds')
+    expect(fam('#d62828')).toBe('reds')
+    expect(fam('#f77f00')).toBe('oranges')
+    expect(fam('#fcbf49')).toBe('yellows')
+    expect(fam('#2a9d3f')).toBe('greens')
+    expect(fam('#1d4fd8')).toBe('blues')
+    expect(fam('#7b2cbf')).toBe('purples')
+    expect(fam('#808080')).toBe('neutrals')
+    expect(fam('#6f4e37')).toBe('browns')
+    expect(fam('#8a3324')).toBe('browns')
+    expect(fam('#c23b3b')).toBe('reds')
   })
 })
