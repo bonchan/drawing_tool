@@ -10,6 +10,7 @@ import { CompositionPanel } from './CompositionPanel'
 import { IconButton, VerticalSlider } from './kit'
 import { LayersPanel } from './LayersPanel'
 import { ToolButtons, ToolPanelContent } from './LeftPanel'
+import { UTILITY_TOOLS } from './toolList'
 import { SectionContext } from './sectionContext'
 
 /** Brush size + opacity (or blender strength) at the edge of the canvas. */
@@ -102,10 +103,14 @@ export function PhoneDock() {
   const tool = useStore(toolStore, (s) => s.tool)
   const lastBrush = useStore(toolStore, (s) => s.lastBrush)
   const color = useStore(toolStore, (s) => s.color)
-  const painting = isBrushId(tool) && tool !== 'eraser' && tool !== 'smudge'
+  // The first button always shows the tool you're using (brush, blender, fill…);
+  // while erasing it shows the brush to go back to.
+  const current = tool === 'eraser' ? lastBrush : tool
+  const CurrentIcon = isBrushId(current) && current !== 'smudge' ? Paintbrush : (UTILITY_TOOLS.find((u) => u.id === current)?.icon ?? Paintbrush)
+  const currentLabel = isBrushId(current) ? t(`brushes.${current}.name`) : t(`tools.${current}`)
   // First tap selects the tool; tapping it again opens its settings.
-  const pick = (id: typeof tool, active: boolean) => {
-    if (active) ui.toggleSheet('tools')
+  const pick = (id: typeof tool) => {
+    if (tool === id) ui.toggleSheet('tools')
     else {
       tools.setTool(id)
       uiStore.set({ sheet: null })
@@ -113,10 +118,10 @@ export function PhoneDock() {
   }
   return (
     <nav className="phone-dock" aria-label={t('tools.label')}>
-      <DockButton label={t(`brushes.${lastBrush}.name`)} active={painting || sheet === 'tools'} onClick={() => pick(lastBrush, painting)}>
-        <Paintbrush size={20} />
+      <DockButton label={currentLabel} active={tool === current} onClick={() => pick(current)}>
+        <CurrentIcon size={20} />
       </DockButton>
-      <DockButton label={t('tools.eraser')} active={tool === 'eraser'} onClick={() => pick('eraser', tool === 'eraser')}>
+      <DockButton label={t('tools.eraser')} active={tool === 'eraser'} onClick={() => pick('eraser')}>
         <Eraser size={20} />
       </DockButton>
       <DockButton label={t('color.title')} active={sheet === 'color'} onClick={() => ui.toggleSheet('color')}>

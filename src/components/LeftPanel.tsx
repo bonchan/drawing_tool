@@ -1,22 +1,12 @@
-import { Eraser, FingerprintPattern, Hand, Move, PaintBucket, Paintbrush, Pipette, RotateCcw } from 'lucide-react'
+import { Paintbrush, RotateCcw } from 'lucide-react'
 import { BRUSHES, BRUSH_GROUPS, isBrushId, type BrushId } from '../engine/brushes'
 import { useI18n, type MessageKey } from '../i18n'
 import { useStore } from '../state/store'
 import { toolStore, tools, type ToolId } from '../state/tools'
 import { ui } from '../state/ui'
 import { BrushPreview } from './BrushPreview'
+import { UTILITY_TOOLS } from './toolList'
 import { IconButton, Section, Segmented, Slider, Toggle } from './kit'
-
-type UtilityTool = Exclude<ToolId, BrushId> | 'eraser' | 'smudge'
-
-const UTILITY_TOOLS: Array<{ id: UtilityTool; icon: typeof Eraser; key: string }> = [
-  { id: 'eraser', icon: Eraser, key: 'E' },
-  { id: 'smudge', icon: FingerprintPattern, key: 'U' },
-  { id: 'fill', icon: PaintBucket, key: 'G' },
-  { id: 'eyedropper', icon: Pipette, key: 'I' },
-  { id: 'move', icon: Move, key: 'V' },
-  { id: 'hand', icon: Hand, key: 'H' },
-]
 
 /** The paint tool (current brush) plus the utility tools, as icon buttons. */
 export function ToolButtons({ iconSize = 18 }: { iconSize?: number }) {
@@ -24,12 +14,17 @@ export function ToolButtons({ iconSize = 18 }: { iconSize?: number }) {
   const tool = useStore(toolStore, (s) => s.tool)
   const lastBrush = useStore(toolStore, (s) => s.lastBrush)
   const paintActive = isBrushId(tool) && tool !== 'eraser' && tool !== 'smudge'
+  // On phones/tablets the panel covers the canvas – picking a tool means "let me use it".
+  const choose = (id: ToolId) => {
+    tools.setTool(id)
+    ui.closeOverlays()
+  }
   return (
     <>
       <IconButton
         label={t('tools.paint', { brush: t(`brushes.${lastBrush}.name`) })}
         active={paintActive}
-        onClick={() => tools.setTool(lastBrush)}
+        onClick={() => choose(lastBrush)}
         shortcut={BRUSHES[lastBrush].shortcut}
       >
         <Paintbrush size={iconSize} />
@@ -39,7 +34,7 @@ export function ToolButtons({ iconSize = 18 }: { iconSize?: number }) {
           key={u.id}
           label={t(`tools.${u.id}`)}
           active={tool === u.id}
-          onClick={() => tools.setTool(u.id)}
+          onClick={() => choose(u.id)}
           shortcut={u.id === 'hand' ? `H / ${t('tools.space')}` : u.key}
         >
           <u.icon size={iconSize} />
