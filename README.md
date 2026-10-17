@@ -39,8 +39,17 @@ How it works: the visible image is sampled on a grid using nearest-neighbour sam
 ### Languages
 The whole interface is available in **English** and **Spanish** (*español*): every label, tooltip, brush description, colour name and number format (`12.5%` vs `12,5 %`). The language is detected from the browser, can be changed with the selector in the top bar, and is remembered. Auto-generated layer names follow the language ("Layer 2 copy" ↔ "Capa 2 copia"); names you typed yourself are never touched.
 
+### Phones and tablets
+The layout adapts to the device:
+
+- **Desktop**: docked tool panel on the left, colour/composition/layers on the right.
+- **Tablet** (portrait, or a touch screen up to ~1200 px wide): a slim tool rail on the left with the tools, the current colour and **quick size/opacity sliders**. The brush library and settings open as a drawer, and so does the colour/composition/layers panel when there isn't room to dock it. Tapping the canvas closes a drawer.
+- **Phone**: a bottom dock (brush · eraser · colour · layers · palette) that opens **bottom sheets** you can swipe down to close, plus floating size/opacity sliders at the edge of the canvas. Tap the brush once to select it and again to open its settings.
+
+Gestures: drag with two fingers to pan, pinch to zoom, **touch & hold** to pick a colour (keep dragging to fine-tune), two-finger tap to undo, three-finger tap to redo. Once a stylus has been used, fingers only pan and zoom, so a resting palm never paints.
+
 ### Everything else
-Undo/redo (80 steps, memory-capped; two-finger tap to undo on touch screens), pan/zoom (scroll, pinch, space-drag), straight lines with Shift-click, Alt/right-click colour picking, palm rejection (fingers pan once a stylus is used), autosave to IndexedDB, save/open `.atelier` project files, import images as layers (or drag and drop them), PNG export, keyboard shortcuts (press `?` in the app).
+Undo/redo (80 steps, memory-capped), pan/zoom (scroll, pinch, Space + drag, or **middle-button drag with any tool**), straight lines with Shift-click, colour picking with Alt-click or right-button drag, palm rejection (fingers pan once a stylus is used), autosave to IndexedDB, save/open `.atelier` project files, import images as layers (or drag and drop them), PNG export, keyboard shortcuts (press `?` in the app).
 
 ## Development
 

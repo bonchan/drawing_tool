@@ -3,7 +3,7 @@ import { BRUSHES, BRUSH_GROUPS, isBrushId, type BrushId } from '../engine/brushe
 import { useI18n, type MessageKey } from '../i18n'
 import { useStore } from '../state/store'
 import { toolStore, tools, type ToolId } from '../state/tools'
-import { uiStore } from '../state/ui'
+import { ui } from '../state/ui'
 import { BrushPreview } from './BrushPreview'
 import { IconButton, Section, Segmented, Slider, Toggle } from './kit'
 
@@ -18,20 +18,21 @@ const UTILITY_TOOLS: Array<{ id: UtilityTool; icon: typeof Eraser; key: string }
   { id: 'hand', icon: Hand, key: 'H' },
 ]
 
-function ToolRow() {
+/** The paint tool (current brush) plus the utility tools, as icon buttons. */
+export function ToolButtons({ iconSize = 18 }: { iconSize?: number }) {
   const { t } = useI18n()
   const tool = useStore(toolStore, (s) => s.tool)
   const lastBrush = useStore(toolStore, (s) => s.lastBrush)
   const paintActive = isBrushId(tool) && tool !== 'eraser' && tool !== 'smudge'
   return (
-    <div className="tool-row" role="toolbar" aria-label={t('tools.label')}>
+    <>
       <IconButton
         label={t('tools.paint', { brush: t(`brushes.${lastBrush}.name`) })}
         active={paintActive}
         onClick={() => tools.setTool(lastBrush)}
         shortcut={BRUSHES[lastBrush].shortcut}
       >
-        <Paintbrush size={18} />
+        <Paintbrush size={iconSize} />
       </IconButton>
       {UTILITY_TOOLS.map((u) => (
         <IconButton
@@ -41,9 +42,18 @@ function ToolRow() {
           onClick={() => tools.setTool(u.id)}
           shortcut={u.id === 'hand' ? `H / ${t('tools.space')}` : u.key}
         >
-          <u.icon size={18} />
+          <u.icon size={iconSize} />
         </IconButton>
       ))}
+    </>
+  )
+}
+
+function ToolRow() {
+  const { t } = useI18n()
+  return (
+    <div className="tool-row" role="toolbar" aria-label={t('tools.label')}>
+      <ToolButtons />
     </div>
   )
 }
@@ -64,7 +74,7 @@ function BrushLibrary() {
               onClick={() => {
                 tools.setTool(b.id)
                 // On small screens the panel covers the canvas – get out of the way.
-                if (window.innerWidth < 900) uiStore.set({ leftOpen: false })
+                ui.closeOverlays()
               }}
               title={t(`brushes.${b.id as BrushId}.description`)}
             >
@@ -165,14 +175,18 @@ function SymmetryRow() {
   )
 }
 
-export function LeftPanel() {
+/**
+ * Tools, symmetry, the current tool's settings and the brush library.
+ * `showTools` is off where a tool rail already shows the tool buttons.
+ */
+export function ToolPanelContent({ showTools = true }: { showTools?: boolean }) {
   const { t } = useI18n()
   const tool = useStore(toolStore, (s) => s.tool)
   const title = isBrushId(tool) ? t(`brushes.${tool}.name`) : t(`tools.${tool}`)
   const hint = HINT_KEYS[tool]
   return (
-    <aside className="panel panel-left" aria-label={t('tools.panel')}>
-      <ToolRow />
+    <>
+      {showTools && <ToolRow />}
       <SymmetryRow />
       <div className="panel-scroll">
         <Section
@@ -198,6 +212,15 @@ export function LeftPanel() {
           <BrushLibrary />
         </Section>
       </div>
+    </>
+  )
+}
+
+export function LeftPanel({ drawer = false }: { drawer?: boolean }) {
+  const { t } = useI18n()
+  return (
+    <aside className={`panel panel-left ${drawer ? 'is-drawer' : ''}`} aria-label={t('tools.panel')}>
+      <ToolPanelContent showTools={!drawer} />
     </aside>
   )
 }

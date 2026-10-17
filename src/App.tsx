@@ -9,6 +9,7 @@ import { LeftPanel } from './components/LeftPanel'
 import { StatusBar } from './components/StatusBar'
 import { TooltipLayer } from './components/TooltipLayer'
 import { TopBar } from './components/TopBar'
+import { DrawerScrim, PhoneDock, PhoneSheet, QuickSliders, ToolRail } from './components/TouchControls'
 import { useAnalysis } from './hooks/useApp'
 import { t, useI18n } from './i18n'
 import { exportPng, openFile, saveProject } from './lib/actions'
@@ -16,7 +17,7 @@ import { BRUSH_LIST } from './engine/brushes'
 import { MAX_LAYERS } from './engine/Engine'
 import { useStore } from './state/store'
 import { tools, type ToolId } from './state/tools'
-import { ui, uiStore, view } from './state/ui'
+import { computeLayout, panelDefaults, ui, uiStore, view } from './state/ui'
 import { isTyping } from './lib/dom'
 
 const TOOL_KEYS: Record<string, ToolId> = {
@@ -119,11 +120,60 @@ function useFileDrop() {
   return dragging
 }
 
+/** Follow window size / rotation / input device and switch between desktop, tablet and phone layouts. */
+function useLayoutWatcher() {
+  useEffect(() => {
+    let raf = 0
+    const update = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const next = computeLayout()
+        const cur = uiStore.get()
+        if (next.layout === cur.layout && next.dockRight === cur.dockRight) return
+        if (next.layout !== cur.layout) uiStore.set({ ...next, ...panelDefaults(next) })
+        else uiStore.set({ ...next, rightOpen: next.dockRight })
+      })
+    }
+    const coarse = window.matchMedia?.('(pointer: coarse)')
+    window.addEventListener('resize', update)
+    coarse?.addEventListener?.('change', update)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', update)
+      coarse?.removeEventListener?.('change', update)
+    }
+  }, [])
+}
+
+/** The colour, composition and layers column (docked, or a drawer on tablets). */
+function RightPanel({ drawer }: { drawer: boolean }) {
+  const { t } = useI18n()
+  return (
+    <aside className={`panel panel-right ${drawer ? 'is-drawer' : ''}`} aria-label={t('app.sidePanel')}>
+      <div className="panel-scroll">
+        <ColorPanel />
+        <CompositionPanel />
+        <LayersPanel />
+      </div>
+    </aside>
+  )
+}
+
 /** A gentle nudge on a blank canvas; disappears with the first stroke. */
 function EmptyHint() {
   const { t } = useI18n()
   const empty = useAnalysis((s) => s.result !== null && s.result.coverage === 0 && s.options.scope === 'visible')
-  if (!empty) return null
+  // Wait a moment so a painting that is still being analysed after loading doesn't flash the hint.
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    if (!empty) return
+    const id = setTimeout(() => setSettled(true), 700)
+    return () => {
+      clearTimeout(id)
+      setSettled(false)
+    }
+  }, [empty])
+  if (!empty || !settled) return null
   return (
     <div className="empty-hint" aria-hidden>
       <strong>{t('app.emptyTitle')}</strong>
@@ -134,10 +184,13 @@ function EmptyHint() {
 
 export default function App() {
   const { t } = useI18n()
+  const layout = useStore(uiStore, (s) => s.layout)
+  const dockRight = useStore(uiStore, (s) => s.dockRight)
   const leftOpen = useStore(uiStore, (s) => s.leftOpen)
   const rightOpen = useStore(uiStore, (s) => s.rightOpen)
   const [ready, setReady] = useState(false)
   useShortcuts()
+  useLayoutWatcher()
   const dragging = useFileDrop()
 
   useEffect(() => {
@@ -145,26 +198,24 @@ export default function App() {
   }, [])
 
   return (
-    <div className={`app ${leftOpen ? 'left-open' : ''} ${rightOpen ? 'right-open' : ''}`}>
+    <div className={`app layout-${layout} ${leftOpen ? 'left-open' : ''} ${rightOpen ? 'right-open' : ''}`}>
       <TopBar />
       <div className="workspace">
-        {leftOpen && <LeftPanel />}
+        {layout === 'desktop' && leftOpen && <LeftPanel />}
+        {layout === 'tablet' && <ToolRail />}
         <main className="stage">
           <CanvasView />
+          {layout === 'phone' && <QuickSliders variant="floating" />}
+          {layout === 'tablet' && <DrawerScrim />}
           {!ready && <div className="stage-loading">{t('app.restoring')}</div>}
           {ready && <EmptyHint />}
         </main>
-        {rightOpen && (
-          <aside className="panel panel-right" aria-label={t('app.sidePanel')}>
-            <div className="panel-scroll">
-              <ColorPanel />
-              <CompositionPanel />
-              <LayersPanel />
-            </div>
-          </aside>
-        )}
+        {layout === 'tablet' && leftOpen && <LeftPanel drawer />}
+        {layout !== 'phone' && rightOpen && <RightPanel drawer={layout === 'tablet' && !dockRight} />}
       </div>
       <StatusBar />
+      {layout === 'phone' && <PhoneDock />}
+      {layout === 'phone' && <PhoneSheet />}
       <Dialogs />
       <Toast />
       <TooltipLayer />

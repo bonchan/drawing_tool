@@ -66,9 +66,9 @@ const es: Messages = {
     hints: {
       fill: 'Rellena un área conectada con el color actual.',
       eyedropper:
-        'Haz clic o arrastra sobre el lienzo para tomar un color. Consejo: mantén Alt o haz clic derecho con cualquier pincel para tomarlo sin cambiar de herramienta.',
+        'Haz clic o arrastra sobre el lienzo para tomar un color. Consejo: con cualquier pincel, mantén Alt, arrastra con el botón derecho o deja el dedo apoyado para tomarlo sin cambiar de herramienta.',
       move: 'Arrastra para mover el contenido de la capa activa.',
-      hand: 'Arrastra para desplazarte. Usa la rueda o pellizca para hacer zoom. Mantén Espacio con cualquier herramienta para desplazarte un momento.',
+      hand: 'Arrastra para desplazarte. Usa la rueda o pellizca para hacer zoom. Con cualquier herramienta también puedes desplazarte manteniendo Espacio, arrastrando con el botón central del mouse o arrastrando con dos dedos.',
     },
   },
 
@@ -521,6 +521,9 @@ const es: Messages = {
       altClick: 'Alt + clic, clic derecho',
       delete: 'Supr',
       twoFingers: 'Toque con 2 / 3 dedos',
+      middleDrag: 'Arrastrar con el botón central',
+      twoFingerDrag: 'Dos dedos: arrastrar / pellizcar',
+      touchHold: 'Dejar el dedo apoyado',
     },
     actions: {
       undoRedo: 'Deshacer / rehacer',
@@ -540,6 +543,7 @@ const es: Messages = {
       panels: 'Mostrar / ocultar paneles',
       cancel: 'Cancelar el trazo actual',
       touchUndo: 'Deshacer / rehacer en pantallas táctiles',
+      panZoom: 'Desplazar y hacer zoom',
     },
     tipList: {
       pen: 'Las tabletas gráficas y el Apple Pencil aprovechan toda la presión y la inclinación. Con un mouse, el pincel de tinta sigue tu velocidad.',
@@ -548,6 +552,8 @@ const es: Messages = {
       composition:
         'El panel de composición de color se actualiza mientras pintas. Haz clic en cualquier color para volver a pintar con él.',
       autosave: 'Tu pintura se guarda sola en este navegador. Usa Guardar para llevarla a otro dispositivo.',
+      touch:
+        'En el teléfono o la tableta: dos dedos desplazan y hacen zoom, dejar el dedo apoyado toma un color y un toque con dos dedos deshace. Los controles del borde del lienzo cambian el tamaño y la opacidad del pincel.',
     },
   },
 }

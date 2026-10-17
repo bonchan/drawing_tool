@@ -44,6 +44,15 @@ export function CanvasView() {
     const moveStart = { x: 0, y: 0 }
     const touches = new Map<number, { x: number; y: number }>()
     const gesture = { d0: 1, mx: 0, my: 0, z0: 1, px: 0, py: 0, t0: 0, moved: false, fingers: 0 }
+    // Touch & hold (finger only) turns into the eyedropper, like on paper apps.
+    const HOLD_MS = 450
+    const HOLD_SLOP = 9
+    const hold = { timer: 0 as ReturnType<typeof setTimeout> | 0, x: 0, y: 0, last: null as PointerEvent | null }
+    let strokeStartedAt = 0
+    const cancelHold = () => {
+      if (hold.timer) clearTimeout(hold.timer)
+      hold.timer = 0
+    }
 
     // ---------------------------------------------------------- sizing
 
@@ -54,9 +63,19 @@ export function CanvasView() {
         c.width = Math.max(1, Math.round(r.width * dpr))
         c.height = Math.max(1, Math.round(r.height * dpr))
       }
-      const first = viewStore.get().vw === 0
-      viewStore.set({ vw: r.width, vh: r.height })
-      if (first) view.fit(engine.width, engine.height)
+      const prev = viewStore.get()
+      if (prev.vw === 0) {
+        viewStore.set({ vw: r.width, vh: r.height })
+        view.fit(engine.width, engine.height)
+      } else if (prev.vw !== r.width || prev.vh !== r.height) {
+        // Keep whatever was in the middle of the view in the middle (drawers, rotation…).
+        viewStore.set({
+          vw: r.width,
+          vh: r.height,
+          panX: prev.panX + (r.width - prev.vw) / 2,
+          panY: prev.panY + (r.height - prev.vh) / 2,
+        })
+      }
       viewDirty = overlayDirty = true
     }
     const ro = new ResizeObserver(resize)
@@ -317,8 +336,18 @@ export function CanvasView() {
       if (e.pointerType === 'touch') {
         touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
         if (touches.size === 2) {
-          if (mode === 'paint') engine.cancelStroke()
+          cancelHold()
+          if (mode === 'paint') {
+            // A second finger right after the first means "pinch", so drop the dab;
+            // after a real stroke it's a resting palm, so keep what was painted.
+            if (performance.now() - strokeStartedAt < 300) engine.cancelStroke()
+            else engine.endStroke()
+          }
           if (mode === 'move') engine.endMove()
+          if (mode === 'pick') {
+            pickColor = null
+            pickPrev = null
+          }
           startGesture()
           return
         }
@@ -341,6 +370,8 @@ export function CanvasView() {
       let tool = currentTool()
       if (e.button === 1 || fingerAfterPen) tool = 'hand'
       if (e.button === 2) tool = 'eyedropper'
+
+      if (e.pointerType === 'touch' && (tool === 'hand' || isBrushId(tool))) startHold(e)
 
       if (tool === 'hand') {
         mode = 'pan'
@@ -394,8 +425,28 @@ export function CanvasView() {
           }
           return
         }
-        if (engine.beginStroke(brushId, settings[brushId], color, p)) mode = 'paint'
+        if (engine.beginStroke(brushId, settings[brushId], color, p)) {
+          mode = 'paint'
+          strokeStartedAt = performance.now()
+        }
       }
+    }
+
+    const startHold = (e: PointerEvent) => {
+      cancelHold()
+      hold.x = e.clientX
+      hold.y = e.clientY
+      hold.last = e
+      const id = e.pointerId
+      hold.timer = setTimeout(() => {
+        hold.timer = 0
+        if (activePointer !== id || (mode !== 'paint' && mode !== 'pan') || !hold.last) return
+        if (mode === 'paint') engine.cancelStroke()
+        mode = 'pick'
+        pickPrev = toolStore.get().color
+        pickAt(hold.last)
+        updateCursorStyle()
+      }, HOLD_MS)
     }
 
     const onPointerMove = (e: PointerEvent) => {
@@ -424,6 +475,10 @@ export function CanvasView() {
         cursorStore.set({ pos: { x: p.x, y: p.y } })
       }
       if (e.pointerId !== activePointer) return
+      if (hold.timer) {
+        hold.last = e
+        if (Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > HOLD_SLOP) cancelHold()
+      }
       if (mode === 'paint') {
         const list = e.getCoalescedEvents?.() ?? []
         const events = list.length ? list : [e]
@@ -439,6 +494,7 @@ export function CanvasView() {
     }
 
     const finish = (e: PointerEvent) => {
+      if (e.pointerId === activePointer) cancelHold()
       if (e.pointerType === 'touch') {
         touches.delete(e.pointerId)
         if (mode === 'gesture') {
@@ -531,6 +587,10 @@ export function CanvasView() {
       updateCursorStyle()
     }
     const noMenu = (e: Event) => e.preventDefault()
+    // Middle button always pans: keep the browser's autoscroll (and Linux paste) out of the way.
+    const noMiddle = (e: MouseEvent) => {
+      if (e.button === 1) e.preventDefault()
+    }
 
     overlay.addEventListener('pointerdown', onPointerDown)
     overlay.addEventListener('pointermove', onPointerMove)
@@ -539,6 +599,8 @@ export function CanvasView() {
     overlay.addEventListener('pointerleave', onLeave)
     overlay.addEventListener('wheel', onWheel, { passive: false })
     overlay.addEventListener('contextmenu', noMenu)
+    overlay.addEventListener('mousedown', noMiddle)
+    overlay.addEventListener('auxclick', noMiddle)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
@@ -556,6 +618,9 @@ export function CanvasView() {
       overlay.removeEventListener('pointerleave', onLeave)
       overlay.removeEventListener('wheel', onWheel)
       overlay.removeEventListener('contextmenu', noMenu)
+      overlay.removeEventListener('mousedown', noMiddle)
+      overlay.removeEventListener('auxclick', noMiddle)
+      cancelHold()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)

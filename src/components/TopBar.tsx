@@ -36,15 +36,24 @@ export function TopBar() {
   const zoom = useStore(viewStore, (s) => s.zoom)
   const leftOpen = useStore(uiStore, (s) => s.leftOpen)
   const rightOpen = useStore(uiStore, (s) => s.rightOpen)
+  const layout = useStore(uiStore, (s) => s.layout)
+  const dockRight = useStore(uiStore, (s) => s.dockRight)
+  // Tablets: drawers that would overlap each other close one another.
+  const toggleLeft = () =>
+    uiStore.set({ leftOpen: !leftOpen, rightOpen: layout === 'tablet' && !dockRight && !leftOpen ? false : rightOpen })
+  const toggleRight = () =>
+    uiStore.set({ rightOpen: !rightOpen, leftOpen: layout === 'tablet' && !dockRight && !rightOpen ? false : leftOpen })
   const fileRef = useRef<HTMLInputElement>(null)
   const imageRef = useRef<HTMLInputElement>(null)
 
   return (
     <header className="topbar">
       <div className="topbar-group">
-        <IconButton label={t('topbar.toggleTools')} shortcut="Tab" active={leftOpen} onClick={() => uiStore.set({ leftOpen: !leftOpen })}>
-          <PanelLeft size={17} />
-        </IconButton>
+        {layout !== 'phone' && (
+          <IconButton label={t('topbar.toggleTools')} shortcut="Tab" active={leftOpen} onClick={toggleLeft}>
+            <PanelLeft size={17} />
+          </IconButton>
+        )}
         <div className="brand" aria-label={t('app.name')}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
             <defs>
@@ -116,9 +125,11 @@ export function TopBar() {
         <IconButton label={t('topbar.help')} shortcut="?" className="hide-sm" onClick={() => ui.openDialog('shortcuts')}>
           <CircleQuestionMark size={17} />
         </IconButton>
-        <IconButton label={t('topbar.toggleSide')} active={rightOpen} onClick={() => uiStore.set({ rightOpen: !rightOpen })}>
-          <PanelRight size={17} />
-        </IconButton>
+        {layout !== 'phone' && (
+          <IconButton label={t('topbar.toggleSide')} active={rightOpen} onClick={toggleRight}>
+            <PanelRight size={17} />
+          </IconButton>
+        )}
       </div>
 
       <input

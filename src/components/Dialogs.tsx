@@ -123,10 +123,13 @@ const KEYS: Array<[string | { key: MessageKey }, MessageKey]> = [
   [{ key: 'shortcuts.keys.digits' }, 'shortcuts.actions.opacity'],
   ['X', 'shortcuts.actions.swap'],
   [{ key: 'shortcuts.keys.spaceDrag' }, 'shortcuts.actions.pan'],
+  [{ key: 'shortcuts.keys.middleDrag' }, 'shortcuts.actions.pan'],
+  [{ key: 'shortcuts.keys.twoFingerDrag' }, 'shortcuts.actions.panZoom'],
   [{ key: 'shortcuts.keys.scroll' }, 'shortcuts.actions.zoom'],
   ['Ctrl+0 / Ctrl+1', 'shortcuts.actions.fit'],
   [{ key: 'shortcuts.keys.shiftClick' }, 'shortcuts.actions.line'],
   [{ key: 'shortcuts.keys.altClick' }, 'shortcuts.actions.pick'],
+  [{ key: 'shortcuts.keys.touchHold' }, 'shortcuts.actions.pick'],
   ['Ctrl+Shift+N', 'shortcuts.actions.newLayer'],
   ['Ctrl+J / Ctrl+E', 'shortcuts.actions.duplicateMerge'],
   [{ key: 'shortcuts.keys.delete' }, 'shortcuts.actions.clear'],
@@ -147,6 +150,7 @@ const TIPS: MessageKey[] = [
   'shortcuts.tipList.pen',
   'shortcuts.tipList.watercolor',
   'shortcuts.tipList.composition',
+  'shortcuts.tipList.touch',
   'shortcuts.tipList.autosave',
 ]
 
@@ -180,7 +184,7 @@ function Shortcuts({ onClose }: { onClose: () => void }) {
           <div className="mini-label">{t('shortcuts.other')}</div>
           <dl className="kbd-list">
             {KEYS.map(([k, d]) => (
-              <div key={d}>
+              <div key={`${typeof k === 'string' ? k : k.key}|${d}`}>
                 <dt>
                   <kbd>{typeof k === 'string' ? k : t(k.key)}</kbd>
                 </dt>

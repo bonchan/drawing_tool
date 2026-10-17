@@ -1,5 +1,5 @@
 import { ArrowLeftRight, Palette } from 'lucide-react'
-import { useState, type PointerEvent as RPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { hexToRgb, hsvToRgb, isValidHex, rgbToHex, rgbToHsv, type HSV } from '../engine/color'
 import { useI18n } from '../i18n'
 import { useStore } from '../state/store'
@@ -15,19 +15,31 @@ const SWATCHES = [
   '#1d2f6f', '#2f6fb3', '#7fb0e0', '#5b3c88', '#b07cc6',
 ]
 
+/** Drag handling for the picker areas – mouse, pen and touch alike. */
 function useDrag(onMove: (x: number, y: number) => void) {
+  const dragging = useRef<number | null>(null)
+  const report = (e: RPointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    onMove((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)
+  }
+  const stop = (e: RPointerEvent<HTMLDivElement>) => {
+    if (dragging.current === e.pointerId) dragging.current = null
+  }
   return {
     onPointerDown(e: RPointerEvent<HTMLDivElement>) {
-      const el = e.currentTarget
-      el.setPointerCapture(e.pointerId)
-      const r = el.getBoundingClientRect()
-      onMove((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)
+      dragging.current = e.pointerId
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {
+        /* capture is a nicety – we track the drag ourselves */
+      }
+      report(e)
     },
     onPointerMove(e: RPointerEvent<HTMLDivElement>) {
-      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
-      const r = e.currentTarget.getBoundingClientRect()
-      onMove((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)
+      if (dragging.current === e.pointerId) report(e)
     },
+    onPointerUp: stop,
+    onPointerCancel: stop,
   }
 }
 

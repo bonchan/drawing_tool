@@ -1,9 +1,11 @@
 import { ChevronDown } from 'lucide-react'
-import { useId, type CSSProperties, type ReactNode } from 'react'
-import { useStore } from '../state/store'
+import { useContext, useId, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { formatValue } from '../lib/format'
+import { fromSliderPos, toSliderPos, type SliderScale } from '../lib/sliderMath'
+import { useStore } from '../state/store'
 import { ui, uiStore } from '../state/ui'
+import { SectionContext } from './sectionContext'
 
 export function Section({
   id,
@@ -20,17 +22,19 @@ export function Section({
   children: ReactNode
   className?: string
 }) {
-  const collapsed = useStore(uiStore, (s) => !!s.collapsed[id])
+  const { forceOpen } = useContext(SectionContext)
+  const collapsedPref = useStore(uiStore, (s) => !!s.collapsed[id])
+  const collapsed = collapsedPref && !forceOpen
   return (
     <section className={`section ${collapsed ? 'is-collapsed' : ''} ${className ?? ''}`}>
       <header className="section-head">
         <button
           type="button"
           className="section-toggle"
-          onClick={() => ui.toggleSection(id)}
+          onClick={() => !forceOpen && ui.toggleSection(id)}
           aria-expanded={!collapsed}
         >
-          <ChevronDown size={14} className="section-chevron" />
+          {!forceOpen && <ChevronDown size={14} className="section-chevron" />}
           {icon}
           <span>{title}</span>
         </button>
@@ -96,18 +100,9 @@ export function Slider({
 }) {
   const id = useId()
   const i18n = useI18n()
-  const toPos = (v: number) => {
-    const t = (v - min) / (max - min)
-    return curve === 'quad' ? Math.sqrt(Math.max(0, t)) : t
-  }
-  const fromPos = (p: number) => {
-    const t = curve === 'quad' ? p * p : p
-    let v = min + t * (max - min)
-    if (unit === 'px') v = v < 10 ? Math.round(v * 2) / 2 : Math.round(v)
-    else if (step) v = Math.round(v / step) * step
-    return Math.max(min, Math.min(max, v))
-  }
-  const pos = toPos(value)
+  const scale: SliderScale = { min, max, step, unit, curve }
+  const fromPos = (p: number) => fromSliderPos(p, scale)
+  const pos = toSliderPos(value, scale)
   return (
     <div className="slider" title={hint}>
       <div className="slider-top">
@@ -173,6 +168,71 @@ export function Segmented<T extends string>({
           {o.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Vertical slider for touch layouts (brush size / opacity at the canvas edge).
+ * Drag anywhere on it; arrow keys work too.
+ */
+export function VerticalSlider({
+  label,
+  value,
+  scale,
+  onChange,
+}: {
+  label: string
+  value: number
+  scale: SliderScale
+  onChange: (v: number) => void
+}) {
+  const i18n = useI18n()
+  const track = useRef<HTMLDivElement>(null)
+  const dragging = useRef<number | null>(null)
+  const pos = toSliderPos(value, scale)
+  const text = formatValue(i18n, value, scale.unit)
+  const setFrom = (e: PointerEvent<HTMLDivElement>) => {
+    const r = track.current!.getBoundingClientRect()
+    onChange(fromSliderPos(1 - (e.clientY - r.top) / r.height, scale))
+  }
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const d = e.key === 'ArrowUp' || e.key === 'ArrowRight' ? 0.03 : e.key === 'ArrowDown' || e.key === 'ArrowLeft' ? -0.03 : 0
+    if (!d) return
+    e.preventDefault()
+    onChange(fromSliderPos(pos + d, scale))
+  }
+  return (
+    <div
+      className="vslider"
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuetext={text}
+      aria-valuenow={Math.round(pos * 100)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-orientation="vertical"
+      data-tip={`${label}  ·  ${text}`}
+      onPointerDown={(e) => {
+        dragging.current = e.pointerId
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId)
+        } catch {
+          /* we track the drag ourselves */
+        }
+        setFrom(e)
+      }}
+      onPointerMove={(e) => dragging.current === e.pointerId && setFrom(e)}
+      onPointerUp={() => (dragging.current = null)}
+      onPointerCancel={() => (dragging.current = null)}
+      onKeyDown={onKey}
+    >
+      <div className="vslider-track" ref={track}>
+        <div className="vslider-fill" style={{ height: `${pos * 100}%` }} />
+        <div className="vslider-thumb" style={{ bottom: `${pos * 100}%` }} />
+      </div>
+      <span className="vslider-value">{text}</span>
     </div>
   )
 }

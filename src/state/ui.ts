@@ -49,9 +49,21 @@ export const view = {
 
 export type CompositionTab = 'colors' | 'families' | 'values'
 
+/**
+ * desktop: docked side panels · tablet: tool rail + drawers (right panel docked
+ * when there's room) · phone: bottom dock + bottom sheets.
+ */
+export type LayoutMode = 'desktop' | 'tablet' | 'phone'
+export type SheetId = 'tools' | 'color' | 'layers' | 'composition'
+
 export interface UiState {
+  layout: LayoutMode
+  /** Tablet only: the right panel fits next to the canvas instead of overlaying it. */
+  dockRight: boolean
   leftOpen: boolean
   rightOpen: boolean
+  /** Phone only: which bottom sheet is showing. */
+  sheet: SheetId | null
   dialog: null | 'new' | 'shortcuts' | 'about'
   toast: { id: number; text: string; tone: 'info' | 'warn' } | null
   /** Collapsed panel sections by key. */
@@ -60,7 +72,25 @@ export interface UiState {
   saving: 'idle' | 'saving' | 'saved' | 'error'
 }
 
-const narrow = typeof window !== 'undefined' && window.innerWidth < 900
+export function computeLayout(): Pick<UiState, 'layout' | 'dockRight'> {
+  if (typeof window === 'undefined') return { layout: 'desktop', dockRight: true }
+  const w = window.innerWidth
+  const h = window.innerHeight
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  // Phones in landscape are wide but very short – they still want the phone layout.
+  if (w < 600 || (coarse && Math.min(w, h) < 500)) return { layout: 'phone', dockRight: false }
+  if (w < 900 || (coarse && w < 1200)) return { layout: 'tablet', dockRight: w >= 1000 }
+  return { layout: 'desktop', dockRight: true }
+}
+
+/** Which panels start open in each layout. */
+export function panelDefaults(l: Pick<UiState, 'layout' | 'dockRight'>): Pick<UiState, 'leftOpen' | 'rightOpen' | 'sheet'> {
+  if (l.layout === 'desktop') return { leftOpen: true, rightOpen: true, sheet: null }
+  if (l.layout === 'tablet') return { leftOpen: false, rightOpen: l.dockRight, sheet: null }
+  return { leftOpen: false, rightOpen: false, sheet: null }
+}
+
+const initialLayout = computeLayout()
 const PREFS_KEY = 'atelier.ui.v1'
 
 /** Layout preferences that survive reloads (open panels depend on the screen, so they don't). */
@@ -78,8 +108,8 @@ function loadPrefs(): Pick<UiState, 'collapsed' | 'compositionTab'> {
 }
 
 export const uiStore = createStore<UiState>({
-  leftOpen: !narrow,
-  rightOpen: !narrow,
+  ...initialLayout,
+  ...panelDefaults(initialLayout),
   dialog: null,
   toast: null,
   ...loadPrefs(),
@@ -113,6 +143,16 @@ export const ui = {
   },
   openDialog(dialog: UiState['dialog']) {
     uiStore.set({ dialog })
+  },
+  /** Phone: open a bottom sheet (or close it if it's already open). */
+  toggleSheet(sheet: SheetId) {
+    uiStore.set((s) => ({ sheet: s.sheet === sheet ? null : sheet }))
+  },
+  /** Close whatever covers the canvas on small screens (after choosing a brush, say). */
+  closeOverlays() {
+    const s = uiStore.get()
+    if (s.layout === 'phone') uiStore.set({ sheet: null })
+    else if (s.layout === 'tablet') uiStore.set({ leftOpen: false, rightOpen: s.dockRight ? s.rightOpen : false })
   },
   toggleSection(key: string) {
     uiStore.set((s) => ({ collapsed: { ...s.collapsed, [key]: !s.collapsed[key] } }))

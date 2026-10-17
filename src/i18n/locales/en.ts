@@ -68,9 +68,9 @@ const en = {
     hints: {
       fill: 'Floods a connected area with the current color.',
       eyedropper:
-        'Click or drag on the canvas to pick a color. Tip: hold Alt or right-click with any brush to pick without switching tools.',
+        'Click or drag on the canvas to pick a color. Tip: with any brush, hold Alt, drag with the right mouse button, or touch & hold with a finger to pick without switching tools.',
       move: 'Drag to move the contents of the active layer.',
-      hand: 'Drag to pan. Scroll or pinch to zoom. Hold Space with any tool to pan temporarily.',
+      hand: 'Drag to pan. Scroll or pinch to zoom. With any tool you can also pan by holding Space, dragging with the middle mouse button, or dragging with two fingers.',
     },
   },
 
@@ -523,6 +523,9 @@ const en = {
       altClick: 'Alt + click, right-click',
       delete: 'Delete',
       twoFingers: '2- / 3-finger tap',
+      middleDrag: 'Middle-button drag',
+      twoFingerDrag: 'Two fingers: drag / pinch',
+      touchHold: 'Touch & hold',
     },
     actions: {
       undoRedo: 'Undo / redo',
@@ -542,6 +545,7 @@ const en = {
       panels: 'Show / hide panels',
       cancel: 'Cancel the current stroke',
       touchUndo: 'Undo / redo on touch screens',
+      panZoom: 'Pan and zoom',
     },
     tipList: {
       pen: 'Pen tablets and Apple Pencil get full pressure and tilt. With a mouse, the Ink Brush follows your speed instead.',
@@ -549,6 +553,8 @@ const en = {
         'Watercolor dries when you lift the pen: edges bleed, darken and granulate. Glaze transparent layers on top of each other.',
       composition: 'The color composition panel updates as you paint. Click any color there to paint with it again.',
       autosave: 'Your painting is autosaved in this browser. Use Save to move it to another computer.',
+      touch:
+        'On a phone or tablet: two fingers pan and zoom, touch & hold picks a color, and a two-finger tap undoes. The sliders at the edge of the canvas set brush size and opacity.',
     },
   },
 }

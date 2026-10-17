@@ -1543,6 +1543,7 @@ button.comp-row:hover,
 
 /* ------------------------------------------------------------------ responsive */
 
+/* Small desktops / landscape tablets with a mouse: slimmer docked panels. */
 @media (max-width: 1100px) {
   .panel-left {
     width: 240px;
@@ -1555,76 +1556,348 @@ button.comp-row:hover,
   }
 }
 
-@media (max-width: 900px) {
-  .panel {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    box-shadow: var(--shadow);
+/* ---- tablet: tool rail on the left, panels as drawers ------------------ */
+
+.tool-rail {
+  width: 60px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 10px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  z-index: 7;
+}
+.tool-rail::-webkit-scrollbar {
+  display: none;
+}
+.tool-rail .icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+.rail-sep {
+  flex: none;
+  width: 32px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--line-2);
+}
+.rail-color {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin: 2px 0 6px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--panel);
+  box-shadow:
+    0 0 0 1px var(--line-2),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.panel.is-drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  box-shadow: var(--shadow);
+}
+.panel-left.is-drawer {
+  left: 60px;
+  width: min(300px, calc(100vw - 80px));
+  animation: drawer-left 0.18s ease-out;
+}
+.panel-right.is-drawer {
+  right: 0;
+  width: min(320px, calc(100vw - 80px));
+  animation: drawer-right 0.18s ease-out;
+}
+@keyframes drawer-left {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
   }
-  .panel-left {
-    left: 0;
+}
+@keyframes drawer-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
   }
-  .panel-right {
-    right: 0;
-    width: min(320px, 88vw);
+}
+.drawer-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ---- quick size / opacity sliders --------------------------------------- */
+
+.quick-sliders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.quick-sliders.is-rail {
+  flex: 1;
+  min-height: 0;
+  margin-top: 6px;
+}
+.quick-sliders.is-rail .vslider {
+  flex: 1;
+  min-height: 96px;
+  max-height: 210px;
+}
+.quick-sliders.is-floating {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  padding: 12px 4px 8px;
+  border-radius: 18px;
+  background: rgba(22, 23, 26, 0.84);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+.quick-sliders.is-floating .vslider {
+  height: min(150px, 24dvh);
+}
+.vslider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 42px;
+  touch-action: none;
+  cursor: ns-resize;
+  border-radius: 8px;
+}
+.vslider-track {
+  position: relative;
+  flex: 1;
+  width: 8px;
+  min-height: 50px;
+  border-radius: 4px;
+  background: var(--line-2);
+}
+.vslider-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--accent);
+}
+.vslider-thumb {
+  position: absolute;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, 50%);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.vslider-value {
+  font-size: 10.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- phone: bottom dock + bottom sheets --------------------------------- */
+
+.app.layout-phone {
+  grid-template-rows: 48px minmax(0, 1fr) 26px auto;
+}
+.phone-dock {
+  display: flex;
+  align-items: stretch;
+  height: calc(58px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.dock-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+}
+.dock-btn.is-active {
+  color: var(--accent);
+}
+.dock-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 550;
+}
+.dock-color {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 3px var(--line-2);
+}
+.dock-btn.is-active .dock-color {
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 4px var(--accent);
+}
+
+.sheet-backdrop {
+  /* stops above the dock, so the dock can switch between sheets */
+  position: fixed;
+  inset: 0 0 calc(58px + env(safe-area-inset-bottom)) 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.3);
+  animation: fade 0.15s;
+}
+.sheet {
+  width: 100%;
+  max-height: min(72dvh, 680px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.45);
+  animation: sheet-up 0.2s ease-out;
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(48px);
+    opacity: 0.5;
   }
-  .statusbar .status-item:not(.status-save) {
-    display: none;
+}
+.sheet-head {
+  position: relative;
+  flex: none;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  cursor: grab;
+}
+.sheet-grip {
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-2);
+}
+.sheet-close {
+  position: absolute;
+  right: 6px;
+  top: 2px;
+}
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sheet-body .panel-scroll {
+  overflow: visible;
+}
+.sheet-body .tool-row {
+  grid-template-columns: repeat(7, minmax(40px, 1fr));
+}
+.sheet-body .tool-row .icon-btn {
+  height: 42px;
+}
+
+/* ---- compact top bar / status bar ---------------------------------------- */
+
+.layout-phone .statusbar,
+.layout-tablet .statusbar {
+  gap: 10px;
+}
+.layout-phone .statusbar .status-item,
+.layout-tablet .status-pos {
+  display: none;
+}
+.layout-phone .toast {
+  bottom: calc(96px + env(safe-area-inset-bottom));
+}
+.layout-phone .shortcut-cols {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 760px) {
+  .hide-sm {
+    display: none !important;
   }
-  .brand span {
+  .brand span,
+  .btn-primary span {
     display: none;
   }
 }
 
-@media (max-width: 640px) {
-  .topbar {
-    gap: 4px;
-    padding: 0 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .topbar::-webkit-scrollbar {
-    display: none;
-  }
-  .topbar-group {
-    flex: none;
-  }
-  .hide-sm {
-    display: none !important;
-  }
-  /* compact language button: show the code, keep the native picker on top of it */
-  .lang-select {
-    position: relative;
-    padding: 0 6px;
-  }
-  .lang-select select {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    opacity: 0;
-  }
-  .lang-code {
-    display: inline;
-  }
-  .brand {
-    padding: 0 2px;
-  }
-  .zoom-readout {
-    min-width: 44px;
-  }
-  .topbar .icon-btn {
-    width: 30px;
-  }
-  .btn-primary span {
-    display: none;
-  }
-  .shortcut-cols {
-    grid-template-columns: 1fr;
-  }
-  .status-save {
-    display: none;
-  }
+.layout-phone .topbar {
+  gap: 4px;
+  padding: 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.layout-phone .topbar::-webkit-scrollbar {
+  display: none;
+}
+.layout-phone .topbar-group {
+  flex: none;
+}
+.layout-phone .hide-sm {
+  display: none !important;
+}
+.layout-phone .brand span,
+.layout-phone .btn-primary span {
+  display: none;
+}
+.layout-phone .brand {
+  padding: 0 2px;
+}
+.layout-phone .zoom-readout {
+  min-width: 44px;
+}
+.layout-phone .topbar .icon-btn {
+  width: 34px;
+}
+/* compact language button: show the code, keep the native picker on top of it */
+.layout-phone .lang-select {
+  position: relative;
+  padding: 0 6px;
+}
+.layout-phone .lang-select select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+}
+.layout-phone .lang-code {
+  display: inline;
 }
 
 @media (prefers-reduced-motion: reduce) {
