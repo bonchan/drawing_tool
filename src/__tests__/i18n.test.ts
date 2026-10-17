@@ -96,6 +96,13 @@ describe('translation runtime', () => {
     expect(swatchName(i18n(), { nameId: 'gray', shade: 2 })).toBe('Gray (2)')
   })
 
+  it('lets the latest language choice win', async () => {
+    const slow = setLocale('es', { persist: false })
+    const fast = setLocale('en', { persist: false })
+    await Promise.all([slow, fast])
+    expect(i18nStore.get().locale).toBe('en')
+  })
+
   it('falls back to English and then to the key', async () => {
     await setLocale('en', { persist: false })
     i18nStore.set({ locale: 'es', messages: { layers: { title: 'Capas' } } })

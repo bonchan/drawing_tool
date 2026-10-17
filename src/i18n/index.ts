@@ -67,7 +67,10 @@ export function onLocaleChange(fn: LocaleListener) {
   return () => localeListeners.delete(fn)
 }
 
+let requestId = 0
+
 export async function setLocale(code: LocaleCode, opts: { persist?: boolean } = {}) {
+  const request = ++requestId
   const info = LOCALES.find((l) => l.code === code) ?? LOCALES[0]
   let messages: DeepPartial<Messages> = en
   try {
@@ -75,6 +78,8 @@ export async function setLocale(code: LocaleCode, opts: { persist?: boolean } = 
   } catch {
     code = DEFAULT_LOCALE
   }
+  // A newer choice was made while this language was downloading – it wins.
+  if (request !== requestId) return
   const prev = i18nStore.get().locale
   i18nStore.set({ locale: code, messages })
   if (opts.persist !== false) {
